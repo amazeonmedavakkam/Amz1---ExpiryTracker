@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amaze On's Expiry Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #d97706;
+            --primary-light: #fbbf24;
+            --danger: #dc2626;
+            --danger-light: #fca5a5;
+            --success: #059669;
+            --bg: #fafaf9;
+            --card: #ffffff;
+            --text: #1c1917;
+            --text-light: #78716c;
+            --border: #e7e5e4;
+            --shadow: rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #ea580c 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+
+        .header h1 {
+            font-family: 'Fraunces', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .card h2 {
+            font-family: 'Fraunces', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        input, select {
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #b45309;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-success:hover {
+            background: #047857;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid var(--primary);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #fafaf9;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        tr:hover {
+            background: #fafaf9;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: var(--primary);
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-card h3 {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: 'Fraunces', serif;
+            color: var(--primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 1.5rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 2rem 0;
+        }
+
+        .chart-bar {
+            display: inline-block;
+            vertical-align: bottom;
+            background: linear-gradient(to top, var(--primary), var(--primary-light));
+            margin: 0 0.5rem;
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .chart-bar:hover {
+            opacity: 0.8;
+            transform: translateY(-5px);
+        }
+
+        .chart-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: var(--text-light);
+            white-space: nowrap;
+        }
+
+        .chart-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--primary);
+            white-space: nowrap;
+        }
+
+        .chart-wrapper {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 250px;
+            padding: 2rem 0 3rem;
+            border-bottom: 2px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="login-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h2 style="font-family: 'Fraunces', serif; margin-bottom: 1.5rem; text-align: center;">🛒 Amaze On's Expiry Tracker</h2>
+            <div class="form-group">
+                <label>Select Role</label>
+                <select id="login-role" style="width: 100%;">
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group" id="admin-password-field" style="display: none; margin-top: 1rem;">
+                <label>Admin Password</label>
+                <input type="password" id="admin-password" style="width: 100%;" placeholder="Enter admin password">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Your Name</label>
+                <input type="text" id="login-name" style="width: 100%;" placeholder="Enter your name" required>
+            </div>
+            <button onclick="handleLogin()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Login</button>
+            <p id="login-error" style="color: var(--danger); margin-top: 1rem; text-align: center; display: none;"></p>
+        </div>
+    </div>
+
+    <div class="header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>🛒 Amaze On's Expiry Tracker</h1>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                    <span id="user-info"></span>
+                </div>
+                <button onclick="handleLogout()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('add')">Add Items</button>
+            <button class="tab" onclick="switchTab('brand-master')">Brand Master</button>
+            <button class="tab" onclick="switchTab('master-data')">Master Data</button>
+            <button class="tab" onclick="switchTab('upcoming')">Upcoming Expiries</button>
+            <button class="tab" onclick="switchTab('critical')">Critical (7 Days)</button>
+            <button class="tab" onclick="switchTab('expiry-area')">Expiry Area</button>
+            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab" onclick="switchTab('reports')">Reports</button>
+        </div>
+
+        <!-- Add Items Tab -->
+        <div id="add-tab" class="tab-content active">
+            <div class="card">
+                <h2>Add New Item</h2>
+                <form id="add-item-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Brand Name *</label>
+                            <select id="brand" required>
+                                <option value="">Select a brand</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Item Name *</label>
+                            <input type="text" id="item-name" required placeholder="e.g., Milk 1L, Bread Whole Wheat">
+                        </div>
+                        <div class="form-group">
+                            <label>MRP (₹) *</label>
+                            <input type="number" id="mrp" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity *</label>
+                            <input type="number" id="quantity" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Expiry Date *</label>
+                            <input type="date" id="expiry-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Staff Name *</label>
+                            <input type="text" id="staff-name" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Brand Master Tab -->
+        <div id="brand-master-tab" class="tab-content">
+            <div class="card">
+                <h2>Add New Brand</h2>
+                <form id="add-brand-form" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 2rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Brand Name *</label>
+                        <input type="text" id="new-brand-name" required placeholder="e.g., Amul, Britannia, Mother Dairy">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Brand</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Existing Brands</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand Name</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="brands-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Master Data Tab -->
+        <div id="master-data-tab" class="tab-content">
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Items Tracked</h3>
+                    <div class="value" id="total-items-tracked">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Active Items</h3>
+                    <div class="value" id="active-items">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Returned Items</h3>
+                    <div class="value" id="returned-items">0</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Complete Item Tracking</h2>
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Status</label>
+                        <select id="status-filter" onchange="updateMasterDataView()">
+                            <option value="all">All Items</option>
+                            <option value="upcoming">On Shelf</option>
+                            <option value="expiry-area">In Expiry Area</option>
+                            <option value="returned">Returned</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand</label>
+                        <select id="brand-filter" onchange="updateMasterDataView()">
+                            <option value="all">All Brands</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Search Item</label>
+                        <input type="text" id="search-filter" placeholder="Search by item name..." oninput="updateMasterDataView()">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Item Name</th>
+                                <th>MRP</th>
+                                <th>Quantity</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                                <th>Added By</th>
+                                <th>Added Date</th>
+                                <th>Moved By</th>
+                                <th>Moved Date</th>
+                                <th>Returned By</th>
+                                <th>Returned Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="master-data-items"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="exportToCSV()">📥 Export to CSV</button>
+            </div>
+        </div>
+
+        <!-- Upcoming Expiries Tab -->
+        <div id="upcoming-tab" class="tab-content">
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Items</h3>
+                    <div class="value" id="total-upcoming">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Needs Attention</h3>
+                    <div class="value" id="critical-count">0</div>
+                </div>
+            </div>
+
+            <div id="alerts-container"></div>
+
+            <div class="card">
+                <h2>Items Expiring in 30 Days</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Item Name</th>
+                                <th>MRP</th>
+                                <th>Quantity</th>
+                                <th>Expiry Date</th>
+                                <th>Days Left</th>
+                                <th>Added By</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="upcoming-items"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Tab -->
+        <div id="critical-tab" class="tab-content">
+            <div class="card">
+                <h2>Critical Items (7 Days or Less)</h2>
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand</label>
+                        <select id="critical-brand-filter" onchange="updateCriticalView()">
+                            <option value="all">All Brands</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Search Item</label>
+                        <input type="text" id="critical-search-filter" placeholder="Search by item name..." oninput="updateCriticalView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Sort By</label>
+                        <select id="critical-sort-filter" onchange="updateCriticalView()">
+                            <option value="expiry-asc">Expiry Date (Soonest First)</option>
+                            <option value="expiry-desc">Expiry Date (Latest First)</option>
+                            <option value="brand">Brand (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Item Name</th>
+                                <th>MRP</th>
+                                <th>Quantity</th>
+                                <th>Expiry Date</th>
+                                <th>Days Left</th>
+                                <th>Added By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="critical-items"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expiry Area Tab -->
+        <div id="expiry-area-tab" class="tab-content">
+            <div class="card">
+                <h2>Items in Expiry Area</h2>
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand</label>
+                        <select id="expiry-area-brand-filter" onchange="updateExpiryAreaView()">
+                            <option value="all">All Brands</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Search Item</label>
+                        <input type="text" id="expiry-area-search-filter" placeholder="Search by item name..." oninput="updateExpiryAreaView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Sort By</label>
+                        <select id="expiry-area-sort-filter" onchange="updateExpiryAreaView()">
+                            <option value="moved-desc">Recently Moved</option>
+                            <option value="moved-asc">Oldest First</option>
+                            <option value="brand">Brand (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Item Name</th>
+                                <th>MRP</th>
+                                <th>Quantity</th>
+                                <th>Expiry Date</th>
+                                <th>Moved By</th>
+                                <th>Moved Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expiry-area-items"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics-tab" class="tab-content">
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Current Week Worth</h3>
+                    <div class="value" id="current-week-worth">₹0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Expiry Area Worth</h3>
+                    <div class="value" id="total-expiry-worth">₹0</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Week-wise Expiry Area Value Trend</h2>
+                <div id="week-chart" style="margin-top: 2rem;"></div>
+            </div>
+
+            <div class="card">
+                <h2>Weekly Breakdown</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Week</th>
+                                <th>Items Count</th>
+                                <th>Total Quantity</th>
+                                <th>Total Worth (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weekly-breakdown"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports-tab" class="tab-content">
+            <div class="card">
+                <h2>Brand-wise Expiry Report</h2>
+                <div id="brand-report"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoIX7pIS5_HqdB6ExpxQj4toGpu0_dKcAwyzdAKcgmBH8YNbfGsmDdJR_FpmAwiDwU/exec';
+        
+        // Admin password (change this to your desired password)
+        const ADMIN_PASSWORD = "admin123";
+        
+        // ===== GOOGLE SHEETS STORAGE =====
+        const storage = {
+            async get(key) {
+                try {
+                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=get${key === 'expiry-items' ? 'Items' : 'Brands'}`);
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    console.error('Error fetching from Google Sheets:', error);
+                    // Fallback to localStorage
+                    const localData = localStorage.getItem(key);
+                    return localData ? JSON.parse(localData) : null;
+                }
+            },
+            async set(key, value) {
+                try {
+                    const action = key === 'expiry-items' ? 'saveItems' : 'saveBrands';
+                    await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}`, {
+                        method: 'POST',
+                        body: JSON.stringify(value)
+                    });
+                    // Also save to localStorage as backup
+                    localStorage.setItem(key, JSON.stringify(value));
+                } catch (error) {
+                    console.error('Error saving to Google Sheets:', error);
+                    // Fallback to localStorage
+                    localStorage.setItem(key, JSON.stringify(value));
+                }
+            }
+        };
+        
+        // User session
+        let currentUser = {
+            name: '',
+            role: 'staff', // 'staff' or 'admin'
+            loggedIn: false
+        };
+        
+        // Show/hide password field based on role selection
+        document.getElementById('login-role').addEventListener('change', function() {
+            const passwordField = document.getElementById('admin-password-field');
+            if (this.value === 'admin') {
+                passwordField.style.display = 'block';
+            } else {
+                passwordField.style.display = 'none';
+            }
+        });
+        
+        // Handle login
+        function handleLogin() {
+            const role = document.getElementById('login-role').value;
+            const name = document.getElementById('login-name').value.trim();
+            const password = document.getElementById('admin-password').value;
+            const errorMsg = document.getElementById('login-error');
+            
+            if (!name) {
+                errorMsg.textContent = 'Please enter your name';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            if (role === 'admin' && password !== ADMIN_PASSWORD) {
+                errorMsg.textContent = 'Incorrect admin password';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            currentUser = {
+                name: name,
+                role: role,
+                loggedIn: true
+            };
+            
+            // Save to session
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Hide login modal
+            document.getElementById('login-modal').style.display = 'none';
+            
+            // Update UI
+            updateUserInterface();
+            
+            // Pre-fill staff name in forms
+            const staffNameField = document.getElementById('staff-name');
+            if (staffNameField) {
+                staffNameField.value = name;
+                staffNameField.readOnly = true;
+            }
+        }
+        
+        // Handle logout
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('currentUser');
+                location.reload();
+            }
+        }
+        
+        // Update UI based on user role
+        function updateUserInterface() {
+            const userInfo = document.getElementById('user-info');
+            userInfo.innerHTML = `<strong>${currentUser.name}</strong> (${currentUser.role === 'admin' ? '👑 Admin' : '👤 Staff'})`;
+            
+            if (currentUser.role === 'staff') {
+                // Hide admin-only tabs
+                const tabs = document.querySelectorAll('.tab');
+                tabs.forEach(tab => {
+                    if (tab.textContent.includes('Master Data') || 
+                        tab.textContent.includes('Analytics') || 
+                        tab.textContent.includes('Brand Master')) {
+                        tab.style.display = 'none';
+                    }
+                });
+                
+                // Hide export button
+                const exportBtn = document.querySelector('[onclick="exportToCSV()"]');
+                if (exportBtn) exportBtn.style.display = 'none';
+            }
+        }
+        
+        // Check if user is logged in on page load
+        function checkLogin() {
+            const savedUser = sessionStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                updateUserInterface();
+                
+                // Pre-fill staff name
+                const staffNameField = document.getElementById('staff-name');
+                if (staffNameField) {
+                    staffNameField.value = currentUser.name;
+                    staffNameField.readOnly = true;
+                }
+            } else {
+                // Show login modal
+                document.getElementById('login-modal').style.display = 'flex';
+            }
+        }
+
+        // Storage helper with localStorage fallback
+        const storage = {
+            async get(key) {
+                try {
+                    // Try persistent storage first
+                    if (window.storage && window.storage.get) {
+                        const result = await window.storage.get(key);
+                        return result ? JSON.parse(result.value) : null;
+                    }
+                } catch (e) {
+                    // Fallback to localStorage
+                    const data = localStorage.getItem(key);
+                    return data ? JSON.parse(data) : null;
+                }
+                // Fallback to localStorage
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            },
+            async set(key, value) {
+                try {
+                    // Try persistent storage first
+                    if (window.storage && window.storage.set) {
+                        await window.storage.set(key, JSON.stringify(value));
+                        return;
+                    }
+                } catch (error) {
+                    // Fallback to localStorage
+                    localStorage.setItem(key, JSON.stringify(value));
+                }
+                // Fallback to localStorage
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+        };
+
+        // Initialize data
+        let items = [];
+        let brands = [];
+
+        // Load data on startup
+        async function loadData() {
+            const savedItems = await storage.get('expiry-items');
+            if (savedItems) {
+                items = savedItems;
+            }
+            
+            const savedBrands = await storage.get('expiry-brands');
+            if (savedBrands) {
+                brands = savedBrands;
+            }
+            
+            updateAllViews();
+            updateBrandDropdown();
+        }
+
+        // Save data
+        async function saveData() {
+            await storage.set('expiry-items', items);
+            await storage.set('expiry-brands', brands);
+        }
+
+        // Calculate days until expiry
+        function daysUntilExpiry(expiryDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expiry = new Date(expiryDate);
+            expiry.setHours(0, 0, 0, 0);
+            const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+            return diff;
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+            
+            updateAllViews();
+        }
+
+        // Add item
+        document.getElementById('add-item-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const item = {
+                id: Date.now().toString(),
+                brand: document.getElementById('brand').value,
+                itemName: document.getElementById('item-name').value,
+                mrp: parseFloat(document.getElementById('mrp').value),
+                quantity: parseInt(document.getElementById('quantity').value),
+                expiryDate: document.getElementById('expiry-date').value,
+                addedBy: document.getElementById('staff-name').value,
+                addedDate: new Date().toISOString(),
+                status: 'upcoming',
+                movedBy: null,
+                movedDate: null,
+                returnedBy: null,
+                returnedDate: null
+            };
+            
+            items.push(item);
+            await saveData();
+            
+            this.reset();
+            alert('Item added successfully!');
+            updateAllViews();
+        });
+
+        // Add brand
+        document.getElementById('add-brand-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const brandName = document.getElementById('new-brand-name').value.trim();
+            
+            // Check for duplicates
+            if (brands.find(b => b.name.toLowerCase() === brandName.toLowerCase())) {
+                alert('This brand already exists!');
+                return;
+            }
+            
+            const brand = {
+                id: Date.now().toString(),
+                name: brandName,
+                createdDate: new Date().toISOString()
+            };
+            
+            brands.push(brand);
+            await saveData();
+            
+            this.reset();
+            alert('Brand added successfully!');
+            updateBrandsList();
+            updateBrandDropdown();
+        });
+
+        // Update brand dropdown
+        function updateBrandDropdown() {
+            const select = document.getElementById('brand');
+            const currentValue = select.value;
+            
+            select.innerHTML = '<option value="">Select a brand</option>' + 
+                brands.sort((a, b) => a.name.localeCompare(b.name))
+                    .map(brand => `<option value="${brand.name}">${brand.name}</option>`)
+                    .join('');
+            
+            if (currentValue) {
+                select.value = currentValue;
+            }
+        }
+
+        // Update brands list
+        function updateBrandsList() {
+            const tbody = document.getElementById('brands-list');
+            
+            if (brands.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" class="empty-state"><div>No brands added yet. Add your first brand above!</div></td></tr>';
+                return;
+            }
+            
+            const sortedBrands = [...brands].sort((a, b) => a.name.localeCompare(b.name));
+            
+            tbody.innerHTML = sortedBrands.map(brand => `
+                <tr>
+                    <td><strong>${brand.name}</strong></td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteBrand('${brand.id}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Delete brand
+        async function deleteBrand(id) {
+            if (currentUser.role !== 'admin') {
+                alert('Only admins can delete brands');
+                return;
+            }
+            
+            const brand = brands.find(b => b.id === id);
+            if (!brand) return;
+            
+            // Check if brand is in use
+            const inUse = items.some(item => item.brand === brand.name);
+            if (inUse) {
+                alert(`Cannot delete "${brand.name}" - it is being used by existing items.`);
+                return;
+            }
+            
+            if (!confirm(`Delete brand "${brand.name}"?`)) return;
+            
+            brands = brands.filter(b => b.id !== id);
+            await saveData();
+            updateBrandsList();
+            updateBrandDropdown();
+        }
+
+        // Edit item
+        async function editItem(id) {
+            if (currentUser.role !== 'admin') {
+                alert('Only admins can edit items');
+                return;
+            }
+            
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+            const itemName = prompt('Item Name:', item.itemName || '');
+            if (itemName === null) return;
+            
+            const mrp = prompt('MRP (₹):', item.mrp);
+            if (mrp === null) return;
+            
+            const quantity = prompt('Quantity:', item.quantity);
+            if (quantity === null) return;
+            
+            const expiryDate = prompt('Expiry Date (YYYY-MM-DD):', item.expiryDate);
+            if (expiryDate === null) return;
+            
+            item.itemName = itemName || item.itemName;
+            item.mrp = parseFloat(mrp) || item.mrp;
+            item.quantity = parseInt(quantity) || item.quantity;
+            item.expiryDate = expiryDate || item.expiryDate;
+            
+            await saveData();
+            alert('Item updated successfully!');
+            updateAllViews();
+        }
+
+        // Move to expiry area
+        async function moveToExpiryArea(id) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.status = 'expiry-area';
+                item.movedBy = currentUser.name;
+                item.movedDate = new Date().toISOString();
+                await saveData();
+                updateAllViews();
+                alert('Item moved to expiry area successfully!');
+            }
+        }
+
+        // Mark as returned
+        async function markReturned(id) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.status = 'returned';
+                item.returnedBy = currentUser.name;
+                item.returnedDate = new Date().toISOString();
+                await saveData();
+                updateAllViews();
+                alert('Item marked as returned successfully!');
+            }
+        }
+
+        // Update all views
+        function updateAllViews() {
+            updateMasterDataView();
+            updateUpcomingView();
+            updateCriticalView();
+            updateExpiryAreaView();
+            updateAnalyticsView();
+            updateReportsView();
+            updateBrandsList();
+            updateStats();
+            updateAlerts();
+        }
+
+        // Update analytics view
+        function updateAnalyticsView() {
+            const expiryAreaItems = items.filter(item => item.status === 'expiry-area');
+            
+            // Calculate total worth
+            const totalWorth = expiryAreaItems.reduce((sum, item) => 
+                sum + (item.mrp * item.quantity), 0);
+            
+            document.getElementById('total-expiry-worth').textContent = `₹${totalWorth.toFixed(2)}`;
+            
+            // Group by week
+            const weeklyData = {};
+            expiryAreaItems.forEach(item => {
+                const movedDate = new Date(item.movedDate);
+                const weekStart = getWeekStart(movedDate);
+                const weekKey = weekStart.toISOString().split('T')[0];
+                
+                if (!weeklyData[weekKey]) {
+                    weeklyData[weekKey] = {
+                        items: [],
+                        count: 0,
+                        quantity: 0,
+                        worth: 0
+                    };
+                }
+                
+                weeklyData[weekKey].items.push(item);
+                weeklyData[weekKey].count++;
+                weeklyData[weekKey].quantity += item.quantity;
+                weeklyData[weekKey].worth += item.mrp * item.quantity;
+            });
+            
+            // Get current week worth
+            const currentWeekStart = getWeekStart(new Date());
+            const currentWeekKey = currentWeekStart.toISOString().split('T')[0];
+            const currentWeekWorth = weeklyData[currentWeekKey]?.worth || 0;
+            document.getElementById('current-week-worth').textContent = `₹${currentWeekWorth.toFixed(2)}`;
+            
+            // Create chart
+            const sortedWeeks = Object.keys(weeklyData).sort();
+            const maxWorth = Math.max(...Object.values(weeklyData).map(w => w.worth), 1);
+            
+            const chartHTML = `
+                <div class="chart-wrapper">
+                    ${sortedWeeks.map(weekKey => {
+                        const data = weeklyData[weekKey];
+                        const height = (data.worth / maxWorth) * 200;
+                        const weekLabel = formatWeekLabel(weekKey);
+                        return `
+                            <div class="chart-bar" style="height: ${height}px; width: ${Math.max(40, 300/sortedWeeks.length)}px;">
+                                <div class="chart-value">₹${data.worth.toFixed(0)}</div>
+                                <div class="chart-label">${weekLabel}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            document.getElementById('week-chart').innerHTML = sortedWeeks.length > 0 ? chartHTML : 
+                '<div class="empty-state">No data to display</div>';
+            
+            // Update weekly breakdown table
+            const tbody = document.getElementById('weekly-breakdown');
+            if (sortedWeeks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div>No weekly data</div></td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = sortedWeeks.map(weekKey => {
+                const data = weeklyData[weekKey];
+                const weekLabel = formatWeekLabel(weekKey);
+                return `
+                    <tr>
+                        <td>${weekLabel}</td>
+                        <td>${data.count}</td>
+                        <td>${data.quantity}</td>
+                        <td><strong>₹${data.worth.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Helper function to get week start (Monday)
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+            return new Date(d.setDate(diff));
+        }
+        
+        // Format week label
+        function formatWeekLabel(weekKey) {
+            const date = new Date(weekKey);
+            const options = { month: 'short', day: 'numeric' };
+            return `Week of ${date.toLocaleDateString('en-US', options)}`;
+        }
+
+        // Update master data view
+        function updateMasterDataView() {
+            const tbody = document.getElementById('master-data-items');
+            const statusFilter = document.getElementById('status-filter').value;
+            const brandFilter = document.getElementById('brand-filter').value;
+            const searchFilter = document.getElementById('search-filter').value.toLowerCase();
+            
+            // Update brand filter dropdown
+            const brandFilterSelect = document.getElementById('brand-filter');
+            const currentBrandFilter = brandFilterSelect.value;
+            const uniqueBrands = [...new Set(items.map(item => item.brand))].sort();
+            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
+                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
+            brandFilterSelect.value = currentBrandFilter;
+            
+            // Filter items
+            let filteredItems = items;
+            
+            if (statusFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.status === statusFilter);
+            }
+            
+            if (brandFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.brand === brandFilter);
+            }
+            
+            if (searchFilter) {
+                filteredItems = filteredItems.filter(item => 
+                    (item.itemName || '').toLowerCase().includes(searchFilter) ||
+                    item.brand.toLowerCase().includes(searchFilter)
+                );
+            }
+            
+            // Update stats
+            document.getElementById('total-items-tracked').textContent = items.length;
+            document.getElementById('active-items').textContent = items.filter(i => i.status !== 'returned').length;
+            document.getElementById('returned-items').textContent = items.filter(i => i.status === 'returned').length;
+            
+            if (filteredItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-state"><div>No items found</div></td></tr>';
+                return;
+            }
+            
+            // Sort by most recent first
+            const sortedItems = [...filteredItems].sort((a, b) => 
+                new Date(b.addedDate) - new Date(a.addedDate)
+            );
+            
+            tbody.innerHTML = sortedItems.map(item => {
+                const statusBadge = item.status === 'upcoming' ? 'badge-warning' : 
+                                   item.status === 'expiry-area' ? 'badge-danger' : 'badge-success';
+                const statusText = item.status === 'upcoming' ? 'On Shelf' : 
+                                  item.status === 'expiry-area' ? 'Expiry Area' : 'Returned';
+                
+                // Only show edit button for items not yet returned
+                const actionButton = item.status !== 'returned' ? 
+                    `<button class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="editItem('${item.id}')">Edit</button>` : 
+                    '-';
+                
+                return `
+                    <tr>
+                        <td>${item.brand}</td>
+                        <td>${item.itemName || '-'}</td>
+                        <td>₹${item.mrp}</td>
+                        <td>${item.quantity}</td>
+                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                        <td>${item.addedBy}</td>
+                        <td>${new Date(item.addedDate).toLocaleDateString()}</td>
+                        <td>${item.movedBy || '-'}</td>
+                        <td>${item.movedDate ? new Date(item.movedDate).toLocaleDateString() : '-'}</td>
+                        <td>${item.returnedBy || '-'}</td>
+                        <td>${item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : '-'}</td>
+                        <td>${actionButton}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Export to CSV
+        function exportToCSV() {
+            if (currentUser.role !== 'admin') {
+                alert('Only admins can export data');
+                return;
+            }
+            
+            const headers = ['Brand', 'Item Name', 'MRP', 'Quantity', 'Expiry Date', 'Status', 
+                           'Added By', 'Added Date', 'Moved By', 'Moved Date', 'Returned By', 'Returned Date'];
+            
+            const rows = items.map(item => [
+                item.brand,
+                item.itemName || '',
+                item.mrp,
+                item.quantity,
+                item.expiryDate,
+                item.status === 'upcoming' ? 'On Shelf' : item.status === 'expiry-area' ? 'Expiry Area' : 'Returned',
+                item.addedBy,
+                new Date(item.addedDate).toLocaleDateString(),
+                item.movedBy || '',
+                item.movedDate ? new Date(item.movedDate).toLocaleDateString() : '',
+                item.returnedBy || '',
+                item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : ''
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `expiry-tracker-master-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Update upcoming items
+        function updateUpcomingView() {
+            const tbody = document.getElementById('upcoming-items');
+            const upcomingItems = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days <= 30 && days >= 0;
+            });
+
+            if (upcomingItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div>No upcoming expiries</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = upcomingItems.map(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                const badge = days <= 7 ? 'badge-danger' : 'badge-warning';
+                return `
+                    <tr>
+                        <td>${item.brand}</td>
+                        <td>${item.itemName || '-'}</td>
+                        <td>₹${item.mrp}</td>
+                        <td>${item.quantity}</td>
+                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td><span class="badge ${badge}">${days} days</span></td>
+                        <td>${item.addedBy}</td>
+                        <td><span class="badge badge-warning">On Shelf</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update critical items
+        function updateCriticalView() {
+            const tbody = document.getElementById('critical-items');
+            const brandFilter = document.getElementById('critical-brand-filter').value;
+            const searchFilter = document.getElementById('critical-search-filter').value.toLowerCase();
+            const sortFilter = document.getElementById('critical-sort-filter').value;
+            
+            // Update brand filter dropdown
+            const brandFilterSelect = document.getElementById('critical-brand-filter');
+            const currentBrandFilter = brandFilterSelect.value;
+            const criticalItems = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days <= 7 && days >= 0;
+            });
+            const uniqueBrands = [...new Set(criticalItems.map(item => item.brand))].sort();
+            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
+                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
+            brandFilterSelect.value = currentBrandFilter;
+            
+            // Filter items
+            let filteredItems = criticalItems;
+            
+            if (brandFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.brand === brandFilter);
+            }
+            
+            if (searchFilter) {
+                filteredItems = filteredItems.filter(item => 
+                    (item.itemName || '').toLowerCase().includes(searchFilter) ||
+                    item.brand.toLowerCase().includes(searchFilter)
+                );
+            }
+            
+            // Sort items
+            filteredItems.sort((a, b) => {
+                if (sortFilter === 'expiry-asc') {
+                    return new Date(a.expiryDate) - new Date(b.expiryDate);
+                } else if (sortFilter === 'expiry-desc') {
+                    return new Date(b.expiryDate) - new Date(a.expiryDate);
+                } else if (sortFilter === 'brand') {
+                    return a.brand.localeCompare(b.brand);
+                }
+            });
+
+            if (filteredItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div>No critical items found</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredItems.map(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return `
+                    <tr>
+                        <td>${item.brand}</td>
+                        <td>${item.itemName || '-'}</td>
+                        <td>₹${item.mrp}</td>
+                        <td>${item.quantity}</td>
+                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td><span class="badge badge-danger">${days} days</span></td>
+                        <td>${item.addedBy}</td>
+                        <td>
+                            <button class="btn btn-danger" onclick="moveToExpiryArea('${item.id}')">
+                                Move to Expiry Area
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update expiry area
+        function updateExpiryAreaView() {
+            const tbody = document.getElementById('expiry-area-items');
+            const brandFilter = document.getElementById('expiry-area-brand-filter').value;
+            const searchFilter = document.getElementById('expiry-area-search-filter').value.toLowerCase();
+            const sortFilter = document.getElementById('expiry-area-sort-filter').value;
+            
+            // Update brand filter dropdown
+            const brandFilterSelect = document.getElementById('expiry-area-brand-filter');
+            const currentBrandFilter = brandFilterSelect.value;
+            const expiryAreaItems = items.filter(item => item.status === 'expiry-area');
+            const uniqueBrands = [...new Set(expiryAreaItems.map(item => item.brand))].sort();
+            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
+                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
+            brandFilterSelect.value = currentBrandFilter;
+            
+            // Filter items
+            let filteredItems = expiryAreaItems;
+            
+            if (brandFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.brand === brandFilter);
+            }
+            
+            if (searchFilter) {
+                filteredItems = filteredItems.filter(item => 
+                    (item.itemName || '').toLowerCase().includes(searchFilter) ||
+                    item.brand.toLowerCase().includes(searchFilter)
+                );
+            }
+            
+            // Sort items
+            filteredItems.sort((a, b) => {
+                if (sortFilter === 'moved-desc') {
+                    return new Date(b.movedDate) - new Date(a.movedDate);
+                } else if (sortFilter === 'moved-asc') {
+                    return new Date(a.movedDate) - new Date(b.movedDate);
+                } else if (sortFilter === 'brand') {
+                    return a.brand.localeCompare(b.brand);
+                }
+            });
+
+            if (filteredItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div>No items in expiry area</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredItems.map(item => `
+                <tr>
+                    <td>${item.brand}</td>
+                    <td>${item.itemName || '-'}</td>
+                    <td>₹${item.mrp}</td>
+                    <td>${item.quantity}</td>
+                    <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                    <td>${item.movedBy}</td>
+                    <td>${new Date(item.movedDate).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-success" onclick="markReturned('${item.id}')">
+                            Mark as Returned
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update reports
+        function updateReportsView() {
+            const div = document.getElementById('brand-report');
+            const expiryAreaItems = items.filter(item => item.status === 'expiry-area');
+
+            if (expiryAreaItems.length === 0) {
+                div.innerHTML = '<div class="empty-state">No items to report</div>';
+                return;
+            }
+
+            const brandGroups = {};
+            expiryAreaItems.forEach(item => {
+                if (!brandGroups[item.brand]) {
+                    brandGroups[item.brand] = [];
+                }
+                brandGroups[item.brand].push(item);
+            });
+
+            div.innerHTML = Object.entries(brandGroups).map(([brand, items]) => `
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">${brand}</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>MRP</th>
+                                    <th>Quantity</th>
+                                    <th>Expiry Date</th>
+                                    <th>Moved By</th>
+                                    <th>Moved Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map(item => `
+                                    <tr>
+                                        <td>${item.itemName || '-'}</td>
+                                        <td>₹${item.mrp}</td>
+                                        <td>${item.quantity}</td>
+                                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                                        <td>${item.movedBy}</td>
+                                        <td>${new Date(item.movedDate).toLocaleDateString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update stats
+        function updateStats() {
+            const upcomingCount = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days <= 30 && days >= 0;
+            }).length;
+
+            const criticalCount = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days <= 7 && days >= 0;
+            }).length;
+
+            document.getElementById('total-upcoming').textContent = upcomingCount;
+            document.getElementById('critical-count').textContent = criticalCount;
+        }
+
+        // Update alerts
+        function updateAlerts() {
+            const container = document.getElementById('alerts-container');
+            const criticalItems = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days <= 7 && days >= 0;
+            });
+
+            if (criticalItems.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>⚠️ Alert:</strong> ${criticalItems.length} item(s) need to be moved to expiry area within 7 days!
+                </div>
+            `;
+        }
+
+        // Initialize
+        checkLogin();
+        loadData();
+    </script>
+</body>
+</html>
