@@ -490,7 +490,8 @@
 </head>
 <body>
     <!-- Login Modal -->
-    <div id="login-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <!-- NOTE: To show your logo, place "Logo_HD.jpg" in the same folder as this HTML file -->
+    <div id="login-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
         <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: 10% auto;">
             <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">🛒 Amaze On's Expiry Tracker</h2>
             <div class="form-group">
@@ -515,7 +516,10 @@
 
     <div class="header">
         <div class="header-content">
-            <img src="Logo_HD.jpg" alt="Amaze On Logo" class="header-logo" id="header-logo">
+            <img src="Logo_HD.jpg" alt="Amaze On Logo" class="header-logo" id="header-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+            <div id="logo-fallback" style="display: none; background: white; padding: 0.5rem 1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-family: 'Gill Sans', 'Gill Sans MT', serif; font-size: 1.5rem; font-weight: bold; color: #2d6a4f;">
+                🛒 AMAZE ON
+            </div>
             <div class="header-text">
                 <h1>Expiry Tracker</h1>
             </div>
@@ -906,7 +910,8 @@
                     
                     return data;
                 } catch (error) {
-                    console.error('Error fetching from Google Sheets:', error);
+                    // Silently fall back to localStorage - this is expected if Google Sheets URL is not configured
+                    console.log('Using localStorage (Google Sheets sync not available)');
                     // Fallback to localStorage cache
                     const localData = localStorage.getItem(key);
                     return localData ? JSON.parse(localData) : null;
@@ -944,8 +949,8 @@
                         throw new Error('Save failed');
                     }
                 } catch (error) {
-                    console.error('Error saving to Google Sheets:', error);
-                    // Data is still saved locally, will retry on next action
+                    // Silently continue - data is saved locally, Google Sheets sync will retry later
+                    console.log('Data saved locally (Google Sheets sync not available)');
                 } finally {
                     isSyncing = false;
                 }
@@ -968,18 +973,97 @@
         let trendView = 'week'; // 'day', 'week', or 'month'
         let trendOffset = 0; // How many periods to scroll back
         
-        // Wait for DOM to be ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Show/hide password field based on role selection
-            document.getElementById('login-role').addEventListener('change', function() {
-                const passwordField = document.getElementById('admin-password-field');
-                if (this.value === 'admin') {
-                    passwordField.style.display = 'block';
-                } else {
-                    passwordField.style.display = 'none';
-                }
-            });
+        // Initialize login modal and role listener 
+        function initializeLoginHandlers() {
+            const loginRole = document.getElementById('login-role');
+            const passwordField = document.getElementById('admin-password-field');
+            const errorMsg = document.getElementById('login-error');
             
+            if (loginRole && passwordField) {
+                loginRole.addEventListener('change', function() {
+                    // Clear any previous errors
+                    if (errorMsg) {
+                        errorMsg.style.display = 'none';
+                        errorMsg.textContent = '';
+                    }
+                    
+                    // Show/hide password field
+                    if (this.value === 'admin') {
+                        passwordField.style.display = 'block';
+                    } else {
+                        passwordField.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Check login status immediately
+            checkLogin();
+        }
+        
+        // Try to initialize immediately and also on DOMContentLoaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeLoginHandlers);
+        } else {
+            initializeLoginHandlers();
+        }
+        
+        // Handle login - defined early to ensure it's available when page loads
+        window.handleLogin = function() {
+            const role = document.getElementById('login-role').value;
+            const name = document.getElementById('login-name').value.trim();
+            const password = document.getElementById('admin-password').value;
+            const errorMsg = document.getElementById('login-error');
+            
+            // Clear previous errors
+            errorMsg.textContent = '';
+            errorMsg.style.display = 'none';
+            
+            // Validate name
+            if (!name) {
+                errorMsg.textContent = 'Please enter your name';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // Validate admin password
+            if (role === 'admin' && password !== ADMIN_PASSWORD) {
+                errorMsg.textContent = 'Incorrect admin password';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // Create user session
+            currentUser = {
+                name: name,
+                role: role,
+                loggedIn: true
+            };
+            
+            // Save to localStorage (persists across refreshes)
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Hide login modal
+            document.getElementById('login-modal').style.display = 'none';
+            
+            // Update UI
+            updateUserInterface();
+            
+            // Pre-fill staff name in forms
+            const staffNameField = document.getElementById('staff-name');
+            if (staffNameField) {
+                staffNameField.value = name;
+                staffNameField.readOnly = true;
+            }
+            
+            // Start auto-refresh
+            startAutoRefresh();
+            
+            // Load data
+            loadData();
+        }
+        
+        // Wait for DOM to be ready for form handlers
+        document.addEventListener('DOMContentLoaded', function() {
             // Add item form handler
             document.getElementById('add-item-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -1037,58 +1121,12 @@
                 updateBrandDropdown();
             });
             
-            // Initialize
-            checkLogin();
+            // Load initial data
             loadData();
         });
         
-        // Handle login
-        function handleLogin() {
-            const role = document.getElementById('login-role').value;
-            const name = document.getElementById('login-name').value.trim();
-            const password = document.getElementById('admin-password').value;
-            const errorMsg = document.getElementById('login-error');
-            
-            if (!name) {
-                errorMsg.textContent = 'Please enter your name';
-                errorMsg.style.display = 'block';
-                return;
-            }
-            
-            if (role === 'admin' && password !== ADMIN_PASSWORD) {
-                errorMsg.textContent = 'Incorrect admin password';
-                errorMsg.style.display = 'block';
-                return;
-            }
-            
-            currentUser = {
-                name: name,
-                role: role,
-                loggedIn: true
-            };
-            
-            // Save to localStorage (persists across refreshes)
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            // Hide login modal
-            document.getElementById('login-modal').style.display = 'none';
-            
-            // Update UI
-            updateUserInterface();
-            
-            // Pre-fill staff name in forms
-            const staffNameField = document.getElementById('staff-name');
-            if (staffNameField) {
-                staffNameField.value = name;
-                staffNameField.readOnly = true;
-            }
-            
-            // Start auto-refresh
-            startAutoRefresh();
-        }
-        
         // Handle logout
-        function handleLogout() {
+        window.handleLogout = function() {
             if (confirm('Are you sure you want to logout?')) {
                 stopAutoRefresh();
                 localStorage.removeItem('currentUser');
@@ -1126,9 +1164,17 @@
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
                 currentUser.loggedIn = true;
+                
+                // Hide login modal
+                const loginModal = document.getElementById('login-modal');
+                if (loginModal) {
+                    loginModal.style.display = 'none';
+                }
+                
+                // Update UI
                 updateUserInterface();
                 
-                // Pre-fill staff name
+                // Pre-fill staff name when DOM is ready
                 const staffNameField = document.getElementById('staff-name');
                 if (staffNameField) {
                     staffNameField.value = currentUser.name;
@@ -1137,9 +1183,15 @@
                 
                 // Start auto-refresh
                 startAutoRefresh();
+                
+                // Load data
+                loadData();
             } else {
                 // Show login modal
-                document.getElementById('login-modal').style.display = 'block';
+                const loginModal = document.getElementById('login-modal');
+                if (loginModal) {
+                    loginModal.style.display = 'flex';
+                }
             }
         }
 
@@ -1475,7 +1527,7 @@
             document.getElementById('trend-day-btn').className = 'btn';
             document.getElementById('trend-week-btn').className = 'btn';
             document.getElementById('trend-month-btn').className = 'btn';
-            document.getElementById(`trend-${view}-btn').className = 'btn btn-primary';
+            document.getElementById(`trend-${view}-btn`).className = 'btn btn-primary';
             
             updateAnalyticsView();
         }
