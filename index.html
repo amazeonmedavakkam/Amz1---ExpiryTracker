@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amaze On's Expiry Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,43 +12,69 @@
         }
 
         :root {
-            --primary: #d97706;
-            --primary-light: #fbbf24;
-            --danger: #dc2626;
-            --danger-light: #fca5a5;
-            --success: #059669;
-            --bg: #fafaf9;
+            --primary: #2d6a4f;
+            --primary-light: #40916c;
+            --primary-dark: #1b4332;
+            --accent: #52b788;
+            --accent-light: #74c69d;
+            --danger: #c1121f;
+            --danger-light: #f28482;
+            --success: #2d6a4f;
+            --bg: #f8fdf9;
+            --bg-secondary: #e8f5e9;
             --card: #ffffff;
-            --text: #1c1917;
-            --text-light: #78716c;
-            --border: #e7e5e4;
-            --shadow: rgba(0, 0, 0, 0.08);
+            --text: #1b4332;
+            --text-light: #52796f;
+            --text-muted: #74c69d;
+            --border: #d8f3dc;
+            --shadow: rgba(45, 106, 79, 0.1);
+            --shadow-dark: rgba(45, 106, 79, 0.2);
         }
 
         body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--bg);
+            font-family: 'Gill Sans', 'Gill Sans MT', 'Calibri', 'Trebuchet MS', sans-serif;
+            background: linear-gradient(135deg, var(--bg) 0%, var(--bg-secondary) 100%);
             color: var(--text);
             line-height: 1.6;
+            min-height: 100vh;
         }
 
         .header {
-            background: linear-gradient(135deg, var(--primary) 0%, #ea580c 100%);
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
             color: white;
-            padding: 2rem;
-            box-shadow: 0 4px 20px var(--shadow);
+            padding: 2.5rem 2rem;
+            box-shadow: 0 8px 32px var(--shadow-dark);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.5;
         }
 
         .header h1 {
-            font-family: 'Fraunces', serif;
-            font-size: 2rem;
+            font-family: 'Gill Sans', 'Gill Sans MT', serif;
+            font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
         }
 
         .header p {
-            opacity: 0.9;
-            font-size: 0.95rem;
+            opacity: 0.95;
+            font-size: 1rem;
+            position: relative;
+            z-index: 1;
         }
 
         .container {
@@ -60,10 +85,14 @@
 
         .tabs {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.25rem;
             margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border);
+            border-bottom: 3px solid var(--border);
             flex-wrap: wrap;
+            background: var(--card);
+            padding: 0.5rem;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 2px 8px var(--shadow);
         }
 
         .tab {
@@ -72,28 +101,23 @@
             border: none;
             color: var(--text-light);
             font-size: 0.95rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            border-radius: 8px;
+            font-family: 'Gill Sans', 'Gill Sans MT', sans-serif;
         }
 
         .tab:hover {
             color: var(--primary);
+            background: var(--bg-secondary);
         }
 
         .tab.active {
-            color: var(--primary);
-        }
-
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--primary);
+            color: white;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            box-shadow: 0 4px 12px var(--shadow-dark);
         }
 
         .tab-content {
@@ -112,17 +136,28 @@
 
         .card {
             background: var(--card);
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 2px 8px var(--shadow);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px var(--shadow);
             margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px var(--shadow-dark);
+            transform: translateY(-2px);
         }
 
         .card h2 {
-            font-family: 'Fraunces', serif;
-            font-size: 1.5rem;
+            font-family: 'Gill Sans', 'Gill Sans MT', serif;
+            font-size: 1.75rem;
             margin-bottom: 1.5rem;
-            color: var(--text);
+            color: var(--primary-dark);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            border-bottom: 3px solid var(--accent-light);
+            padding-bottom: 0.75rem;
         }
 
         .form-grid {
@@ -138,69 +173,87 @@
         }
 
         label {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--text-light);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
             margin-bottom: 0.5rem;
+            letter-spacing: 0.3px;
         }
 
         input, select {
-            padding: 0.75rem;
+            padding: 0.875rem;
             border: 2px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.95rem;
-            font-family: inherit;
-            transition: all 0.2s ease;
+            font-family: 'Gill Sans', 'Gill Sans MT', sans-serif;
+            transition: all 0.3s ease;
+            background: var(--bg);
+            color: var(--text);
         }
 
         input:focus, select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+            box-shadow: 0 0 0 4px rgba(45, 106, 79, 0.1);
+            background: white;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 2rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.95rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
+            transition: all 0.3s ease;
+            font-family: 'Gill Sans', 'Gill Sans MT', sans-serif;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px var(--shadow);
         }
 
         .btn-primary {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #b45309;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--shadow-dark);
         }
 
         .btn-danger {
-            background: var(--danger);
+            background: linear-gradient(135deg, #c1121f 0%, #e5383b 100%);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.625rem 1.25rem;
             font-size: 0.85rem;
         }
 
         .btn-danger:hover {
-            background: #b91c1c;
+            background: linear-gradient(135deg, #9a0f1a 0%, #c1121f 100%);
+            transform: translateY(-1px);
         }
 
         .btn-success {
-            background: var(--success);
+            background: linear-gradient(135deg, var(--success) 0%, var(--accent) 100%);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.625rem 1.25rem;
             font-size: 0.85rem;
         }
 
         .btn-success:hover {
-            background: #047857;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--success) 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
         }
 
         .alert {
@@ -240,46 +293,52 @@
         }
 
         th {
-            background: #fafaf9;
-            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            padding: 1.25rem;
             text-align: left;
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--text-light);
-            border-bottom: 2px solid var(--border);
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+            border-bottom: 3px solid var(--accent);
+            letter-spacing: 0.5px;
         }
 
         td {
-            padding: 1rem;
+            padding: 1.25rem;
             border-bottom: 1px solid var(--border);
             font-size: 0.9rem;
+            color: var(--text);
         }
 
         tr:hover {
-            background: #fafaf9;
+            background: var(--bg-secondary);
         }
 
         .badge {
             display: inline-block;
-            padding: 0.25rem 0.75rem;
+            padding: 0.375rem 1rem;
             border-radius: 20px;
             font-size: 0.8rem;
-            font-weight: 500;
+            font-weight: 600;
+            letter-spacing: 0.3px;
         }
 
         .badge-danger {
-            background: var(--danger-light);
+            background: linear-gradient(135deg, var(--danger-light) 0%, #fca5a5 100%);
             color: var(--danger);
+            box-shadow: 0 2px 8px rgba(193, 18, 31, 0.2);
         }
 
         .badge-warning {
-            background: #fef3c7;
-            color: var(--primary);
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
         }
 
         .badge-success {
-            background: #d1fae5;
-            color: var(--success);
+            background: linear-gradient(135deg, var(--accent-light) 0%, #95d5b2 100%);
+            color: var(--primary-dark);
+            box-shadow: 0 2px 8px var(--shadow-dark);
         }
 
         .stats {
@@ -290,24 +349,34 @@
         }
 
         .stat-card {
-            background: var(--card);
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px var(--shadow);
-            border-left: 4px solid var(--primary);
+            background: linear-gradient(135deg, white 0%, var(--bg-secondary) 100%);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px var(--shadow);
+            border-left: 5px solid var(--accent);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px var(--shadow-dark);
+            border-left-width: 8px;
         }
 
         .stat-card h3 {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--text-light);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .stat-card .value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            font-family: 'Fraunces', serif;
+            font-family: 'Gill Sans', 'Gill Sans MT', serif;
             color: var(--primary);
+            text-shadow: 2px 2px 4px var(--shadow);
         }
 
         .empty-state {
@@ -350,36 +419,39 @@
         .chart-bar {
             display: inline-block;
             vertical-align: bottom;
-            background: linear-gradient(to top, var(--primary), var(--primary-light));
+            background: linear-gradient(to top, var(--primary), var(--accent-light));
             margin: 0 0.5rem;
-            border-radius: 4px 4px 0 0;
+            border-radius: 8px 8px 0 0;
             position: relative;
             transition: all 0.3s ease;
             cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow-dark);
         }
 
         .chart-bar:hover {
             opacity: 0.8;
-            transform: translateY(-5px);
+            transform: translateY(-8px);
+            box-shadow: 0 8px 24px var(--shadow-dark);
         }
 
         .chart-label {
             position: absolute;
-            bottom: -30px;
+            bottom: -35px;
             left: 50%;
             transform: translateX(-50%);
             font-size: 0.75rem;
             color: var(--text-light);
             white-space: nowrap;
+            font-weight: 600;
         }
 
         .chart-value {
             position: absolute;
-            top: -25px;
+            top: -30px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.85rem;
+            font-weight: 700;
             color: var(--primary);
             white-space: nowrap;
         }
@@ -388,9 +460,11 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            height: 250px;
+            height: 280px;
             padding: 2rem 0 3rem;
-            border-bottom: 2px solid var(--border);
+            border-bottom: 3px solid var(--border);
+            background: linear-gradient(to bottom, transparent 0%, var(--bg-secondary) 100%);
+            border-radius: 12px;
         }
     </style>
 </head>
@@ -398,7 +472,7 @@
     <!-- Login Modal -->
     <div id="login-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
         <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: 10% auto;">
-            <h2 style="font-family: 'Fraunces', serif; margin-bottom: 1.5rem; text-align: center;">🛒 Amaze On's Expiry Tracker</h2>
+            <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">🛒 Amaze On's Expiry Tracker</h2>
             <div class="form-group">
                 <label>Select Role</label>
                 <select id="login-role" style="width: 100%;">
@@ -631,6 +705,14 @@
                         </select>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Expiry Date From</label>
+                        <input type="date" id="critical-date-from" onchange="updateCriticalView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Expiry Date To</label>
+                        <input type="date" id="critical-date-to" onchange="updateCriticalView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
                         <label>Search Item</label>
                         <input type="text" id="critical-search-filter" placeholder="Search by item name..." oninput="updateCriticalView()">
                     </div>
@@ -673,6 +755,14 @@
                         <select id="expiry-area-brand-filter" onchange="updateExpiryAreaView()">
                             <option value="all">All Brands</option>
                         </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Moved Date From</label>
+                        <input type="date" id="expiry-area-date-from" onchange="updateExpiryAreaView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Moved Date To</label>
+                        <input type="date" id="expiry-area-date-to" onchange="updateExpiryAreaView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
                         <label>Search Item</label>
@@ -721,23 +811,37 @@
             </div>
 
             <div class="card">
-                <h2>Week-wise Expiry Area Value Trend</h2>
-                <div id="week-chart" style="margin-top: 2rem;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>Expiry Area Value Trend</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('day')" id="trend-day-btn">Daily</button>
+                        <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('week')" id="trend-week-btn">Weekly</button>
+                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('month')" id="trend-month-btn">Monthly</button>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollTrendData('prev')" id="trend-prev-btn">← Previous</button>
+                    <span id="trend-range-display" style="font-weight: 500; flex: 1; text-align: center;"></span>
+                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollTrendData('next')" id="trend-next-btn">Next →</button>
+                </div>
+                
+                <div id="trend-chart" style="margin-top: 2rem;"></div>
             </div>
 
             <div class="card">
-                <h2>Weekly Breakdown</h2>
+                <h2>Period Breakdown</h2>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th>Week</th>
+                                <th>Period</th>
                                 <th>Items Count</th>
                                 <th>Total Quantity</th>
                                 <th>Total Worth (₹)</th>
                             </tr>
                         </thead>
-                        <tbody id="weekly-breakdown"></tbody>
+                        <tbody id="period-breakdown"></tbody>
                     </table>
                 </div>
             </div>
@@ -838,6 +942,10 @@
         let items = [];
         let brands = [];
         let autoRefreshTimer = null;
+        
+        // Trend view state
+        let trendView = 'week'; // 'day', 'week', or 'month'
+        let trendOffset = 0; // How many periods to scroll back
         
         // Wait for DOM to be ready
         document.addEventListener('DOMContentLoaded', function() {
@@ -1181,6 +1289,57 @@
             updateBrandDropdown();
         }
 
+        // Reset item status (Admin only - for fixing stuck items)
+        async function resetItemStatus(id) {
+            if (currentUser.role !== 'admin') {
+                alert('Only admins can reset item status');
+                return;
+            }
+            
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+            const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n\nEnter new status:`);
+            
+            if (!newStatus) return;
+            
+            const validStatuses = ['upcoming', 'expiry-area', 'returned'];
+            if (!validStatuses.includes(newStatus)) {
+                alert('Invalid status. Must be: upcoming, expiry-area, or returned');
+                return;
+            }
+            
+            // Update status and related fields
+            item.status = newStatus;
+            
+            if (newStatus === 'upcoming') {
+                item.movedBy = null;
+                item.movedDate = null;
+                item.returnedBy = null;
+                item.returnedDate = null;
+            } else if (newStatus === 'expiry-area') {
+                if (!item.movedBy) {
+                    item.movedBy = currentUser.name;
+                    item.movedDate = new Date().toISOString();
+                }
+                item.returnedBy = null;
+                item.returnedDate = null;
+            } else if (newStatus === 'returned') {
+                if (!item.movedBy) {
+                    item.movedBy = currentUser.name;
+                    item.movedDate = new Date().toISOString();
+                }
+                if (!item.returnedBy) {
+                    item.returnedBy = currentUser.name;
+                    item.returnedDate = new Date().toISOString();
+                }
+            }
+            
+            await saveData();
+            await autoRefreshData();
+            alert(`Item status reset to: ${newStatus}`);
+        }
+
         // Edit item
         async function editItem(id) {
             if (currentUser.role !== 'admin') {
@@ -1213,29 +1372,63 @@
             updateAllViews();
         }
 
-        // Move to expiry area
+        // Move to expiry area (with error handling)
         async function moveToExpiryArea(id) {
-            const item = items.find(i => i.id === id);
-            if (item) {
+            try {
+                const item = items.find(i => i.id === id);
+                if (!item) {
+                    alert('Error: Item not found. Please refresh the page.');
+                    await autoRefreshData();
+                    return;
+                }
+                
+                if (item.status !== 'upcoming') {
+                    alert(`This item is already in ${item.status} status. Refreshing data...`);
+                    await autoRefreshData();
+                    return;
+                }
+                
                 item.status = 'expiry-area';
                 item.movedBy = currentUser.name;
                 item.movedDate = new Date().toISOString();
+                
                 await saveData();
-                updateAllViews();
+                await autoRefreshData();
+                
                 alert('Item moved to expiry area successfully!');
+            } catch (error) {
+                console.error('Error moving item:', error);
+                alert('Failed to move item. Please try again.');
             }
         }
 
-        // Mark as returned
+        // Mark as returned (with error handling)
         async function markReturned(id) {
-            const item = items.find(i => i.id === id);
-            if (item) {
+            try {
+                const item = items.find(i => i.id === id);
+                if (!item) {
+                    alert('Error: Item not found. Please refresh the page.');
+                    await autoRefreshData();
+                    return;
+                }
+                
+                if (item.status !== 'expiry-area') {
+                    alert(`This item is in ${item.status} status, not in expiry area. Refreshing data...`);
+                    await autoRefreshData();
+                    return;
+                }
+                
                 item.status = 'returned';
                 item.returnedBy = currentUser.name;
                 item.returnedDate = new Date().toISOString();
+                
                 await saveData();
-                updateAllViews();
+                await autoRefreshData();
+                
                 alert('Item marked as returned successfully!');
+            } catch (error) {
+                console.error('Error marking returned:', error);
+                alert('Failed to mark as returned. Please try again.');
             }
         }
 
@@ -1252,6 +1445,86 @@
             updateAlerts();
         }
 
+        // Change trend view
+        function changeTrendView(view) {
+            trendView = view;
+            trendOffset = 0; // Reset to current period
+            
+            // Update button styles
+            document.getElementById('trend-day-btn').className = 'btn';
+            document.getElementById('trend-week-btn').className = 'btn';
+            document.getElementById('trend-month-btn').className = 'btn';
+            document.getElementById(`trend-${view}-btn').className = 'btn btn-primary';
+            
+            updateAnalyticsView();
+        }
+        
+        // Scroll trend data
+        function scrollTrendData(direction) {
+            if (direction === 'prev') {
+                trendOffset++;
+            } else if (direction === 'next' && trendOffset > 0) {
+                trendOffset--;
+            }
+            updateAnalyticsView();
+        }
+        
+        // Get date range for current view
+        function getDateRange() {
+            const today = new Date();
+            let startDate, endDate, periods;
+            
+            if (trendView === 'day') {
+                // Show 7 days
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setDate(endDate.getDate() - (trendOffset * periods));
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - (periods - 1));
+            } else if (trendView === 'week') {
+                // Show 7 weeks
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setDate(endDate.getDate() - (trendOffset * periods * 7));
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - ((periods - 1) * 7));
+            } else { // month
+                // Show 7 months
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setMonth(endDate.getMonth() - trendOffset * periods);
+                startDate = new Date(endDate);
+                startDate.setMonth(startDate.getMonth() - (periods - 1));
+            }
+            
+            return { startDate, endDate, periods };
+        }
+        
+        // Format period label
+        function formatPeriodLabel(date, view) {
+            const options = { month: 'short', day: 'numeric' };
+            if (view === 'day') {
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } else if (view === 'week') {
+                const weekStart = getWeekStart(date);
+                return `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            } else { // month
+                return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            }
+        }
+        
+        // Get period key for grouping
+        function getPeriodKey(date, view) {
+            if (view === 'day') {
+                return date.toISOString().split('T')[0];
+            } else if (view === 'week') {
+                const weekStart = getWeekStart(date);
+                return weekStart.toISOString().split('T')[0];
+            } else { // month
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            }
+        }
+
         // Update analytics view
         function updateAnalyticsView() {
             const expiryAreaItems = items.filter(item => item.status === 'expiry-area');
@@ -1262,76 +1535,108 @@
             
             document.getElementById('total-expiry-worth').textContent = `₹${totalWorth.toFixed(2)}`;
             
-            // Group by week
-            const weeklyData = {};
-            expiryAreaItems.forEach(item => {
-                const movedDate = new Date(item.movedDate);
-                const weekStart = getWeekStart(movedDate);
-                const weekKey = weekStart.toISOString().split('T')[0];
-                
-                if (!weeklyData[weekKey]) {
-                    weeklyData[weekKey] = {
-                        items: [],
-                        count: 0,
-                        quantity: 0,
-                        worth: 0
-                    };
-                }
-                
-                weeklyData[weekKey].items.push(item);
-                weeklyData[weekKey].count++;
-                weeklyData[weekKey].quantity += item.quantity;
-                weeklyData[weekKey].worth += item.mrp * item.quantity;
-            });
-            
             // Get current week worth
             const currentWeekStart = getWeekStart(new Date());
             const currentWeekKey = currentWeekStart.toISOString().split('T')[0];
-            const currentWeekWorth = weeklyData[currentWeekKey]?.worth || 0;
+            
+            // Group by selected period
+            const { startDate, endDate, periods } = getDateRange();
+            const periodData = {};
+            
+            // Initialize all periods in range with zero values
+            const currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                const key = getPeriodKey(currentDate, trendView);
+                if (!periodData[key]) {
+                    periodData[key] = {
+                        items: [],
+                        count: 0,
+                        quantity: 0,
+                        worth: 0,
+                        date: new Date(currentDate)
+                    };
+                }
+                
+                // Move to next period
+                if (trendView === 'day') {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                } else if (trendView === 'week') {
+                    currentDate.setDate(currentDate.getDate() + 7);
+                } else {
+                    currentDate.setMonth(currentDate.getMonth() + 1);
+                }
+            }
+            
+            // Populate with actual data
+            expiryAreaItems.forEach(item => {
+                if (!item.movedDate) return;
+                
+                const movedDate = new Date(item.movedDate);
+                if (movedDate < startDate || movedDate > endDate) return;
+                
+                const key = getPeriodKey(movedDate, trendView);
+                
+                if (periodData[key]) {
+                    periodData[key].items.push(item);
+                    periodData[key].count++;
+                    periodData[key].quantity += item.quantity;
+                    periodData[key].worth += item.mrp * item.quantity;
+                }
+            });
+            
+            // Calculate current week worth
+            const currentWeekWorth = periodData[currentWeekKey]?.worth || 0;
             document.getElementById('current-week-worth').textContent = `₹${currentWeekWorth.toFixed(2)}`;
             
+            // Update range display
+            const rangeDisplay = document.getElementById('trend-range-display');
+            rangeDisplay.textContent = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            
             // Create chart
-            const sortedWeeks = Object.keys(weeklyData).sort();
-            const maxWorth = Math.max(...Object.values(weeklyData).map(w => w.worth), 1);
+            const sortedKeys = Object.keys(periodData).sort();
+            const maxWorth = Math.max(...Object.values(periodData).map(p => p.worth), 1);
             
             const chartHTML = `
                 <div class="chart-wrapper">
-                    ${sortedWeeks.map(weekKey => {
-                        const data = weeklyData[weekKey];
+                    ${sortedKeys.map(key => {
+                        const data = periodData[key];
                         const height = (data.worth / maxWorth) * 200;
-                        const weekLabel = formatWeekLabel(weekKey);
+                        const label = formatPeriodLabel(data.date, trendView);
                         return `
-                            <div class="chart-bar" style="height: ${height}px; width: ${Math.max(40, 300/sortedWeeks.length)}px;">
+                            <div class="chart-bar" style="height: ${height}px; width: ${Math.max(40, 600/sortedKeys.length)}px;">
                                 <div class="chart-value">₹${data.worth.toFixed(0)}</div>
-                                <div class="chart-label">${weekLabel}</div>
+                                <div class="chart-label">${label}</div>
                             </div>
                         `;
                     }).join('')}
                 </div>
             `;
             
-            document.getElementById('week-chart').innerHTML = sortedWeeks.length > 0 ? chartHTML : 
+            document.getElementById('trend-chart').innerHTML = sortedKeys.length > 0 ? chartHTML : 
                 '<div class="empty-state">No data to display</div>';
             
-            // Update weekly breakdown table
-            const tbody = document.getElementById('weekly-breakdown');
-            if (sortedWeeks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div>No weekly data</div></td></tr>';
+            // Update breakdown table
+            const tbody = document.getElementById('period-breakdown');
+            if (sortedKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div>No data for selected period</div></td></tr>';
                 return;
             }
             
-            tbody.innerHTML = sortedWeeks.map(weekKey => {
-                const data = weeklyData[weekKey];
-                const weekLabel = formatWeekLabel(weekKey);
+            tbody.innerHTML = sortedKeys.map(key => {
+                const data = periodData[key];
+                const label = formatPeriodLabel(data.date, trendView);
                 return `
                     <tr>
-                        <td>${weekLabel}</td>
+                        <td>${label}</td>
                         <td>${data.count}</td>
                         <td>${data.quantity}</td>
                         <td><strong>₹${data.worth.toFixed(2)}</strong></td>
                     </tr>
                 `;
             }).join('');
+            
+            // Disable Next button if at current period
+            document.getElementById('trend-next-btn').disabled = trendOffset === 0;
         }
         
         // Helper function to get week start (Monday)
@@ -1340,13 +1645,6 @@
             const day = d.getDay();
             const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
             return new Date(d.setDate(diff));
-        }
-        
-        // Format week label
-        function formatWeekLabel(weekKey) {
-            const date = new Date(weekKey);
-            const options = { month: 'short', day: 'numeric' };
-            return `Week of ${date.toLocaleDateString('en-US', options)}`;
         }
 
         // Update master data view
@@ -1403,10 +1701,20 @@
                 const statusText = item.status === 'upcoming' ? 'On Shelf' : 
                                   item.status === 'expiry-area' ? 'Expiry Area' : 'Returned';
                 
-                // Only show edit button for items not yet returned
-                const actionButton = item.status !== 'returned' ? 
-                    `<button class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="editItem('${item.id}')">Edit</button>` : 
-                    '-';
+                // Show appropriate action buttons
+                let actionButton = '';
+                if (item.status !== 'returned') {
+                    if (currentUser.role === 'admin') {
+                        actionButton = `
+                            <button class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; margin-right: 0.5rem;" onclick="editItem('${item.id}')">Edit</button>
+                            <button class="btn btn-danger" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="resetItemStatus('${item.id}')">Reset</button>
+                        `;
+                    } else {
+                        actionButton = '-';
+                    }
+                } else {
+                    actionButton = '-';
+                }
                 
                 return `
                     <tr>
@@ -1501,6 +1809,8 @@
             const brandFilter = document.getElementById('critical-brand-filter').value;
             const searchFilter = document.getElementById('critical-search-filter').value.toLowerCase();
             const sortFilter = document.getElementById('critical-sort-filter').value;
+            const dateFrom = document.getElementById('critical-date-from').value;
+            const dateTo = document.getElementById('critical-date-to').value;
             
             // Update brand filter dropdown
             const brandFilterSelect = document.getElementById('critical-brand-filter');
@@ -1526,6 +1836,14 @@
                     (item.itemName || '').toLowerCase().includes(searchFilter) ||
                     item.brand.toLowerCase().includes(searchFilter)
                 );
+            }
+            
+            // Date range filter
+            if (dateFrom) {
+                filteredItems = filteredItems.filter(item => item.expiryDate >= dateFrom);
+            }
+            if (dateTo) {
+                filteredItems = filteredItems.filter(item => item.expiryDate <= dateTo);
             }
             
             // Sort items
@@ -1571,6 +1889,8 @@
             const brandFilter = document.getElementById('expiry-area-brand-filter').value;
             const searchFilter = document.getElementById('expiry-area-search-filter').value.toLowerCase();
             const sortFilter = document.getElementById('expiry-area-sort-filter').value;
+            const dateFrom = document.getElementById('expiry-area-date-from').value;
+            const dateTo = document.getElementById('expiry-area-date-to').value;
             
             // Update brand filter dropdown
             const brandFilterSelect = document.getElementById('expiry-area-brand-filter');
@@ -1593,6 +1913,20 @@
                     (item.itemName || '').toLowerCase().includes(searchFilter) ||
                     item.brand.toLowerCase().includes(searchFilter)
                 );
+            }
+            
+            // Date range filter (on moved date)
+            if (dateFrom) {
+                filteredItems = filteredItems.filter(item => {
+                    const movedDate = item.movedDate ? item.movedDate.split('T')[0] : '';
+                    return movedDate >= dateFrom;
+                });
+            }
+            if (dateTo) {
+                filteredItems = filteredItems.filter(item => {
+                    const movedDate = item.movedDate ? item.movedDate.split('T')[0] : '';
+                    return movedDate <= dateTo;
+                });
             }
             
             // Sort items
