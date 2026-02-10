@@ -396,8 +396,8 @@
 </head>
 <body>
     <!-- Login Modal -->
-    <div id="login-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+    <div id="login-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: 10% auto;">
             <h2 style="font-family: 'Fraunces', serif; margin-bottom: 1.5rem; text-align: center;">🛒 Amaze On's Expiry Tracker</h2>
             <div class="form-group">
                 <label>Select Role</label>
@@ -415,7 +415,7 @@
                 <input type="text" id="login-name" style="width: 100%;" placeholder="Enter your name" required>
             </div>
             <button onclick="handleLogin()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Login</button>
-            <p id="login-error" style="color: var(--danger); margin-top: 1rem; text-align: center; display: none;"></p>
+            <p id="login-error" style="color: #dc2626; margin-top: 1rem; text-align: center; display: none;"></p>
         </div>
     </div>
 
@@ -797,14 +797,82 @@
             loggedIn: false
         };
         
-        // Show/hide password field based on role selection
-        document.getElementById('login-role').addEventListener('change', function() {
-            const passwordField = document.getElementById('admin-password-field');
-            if (this.value === 'admin') {
-                passwordField.style.display = 'block';
-            } else {
-                passwordField.style.display = 'none';
-            }
+        // Initialize data
+        let items = [];
+        let brands = [];
+        
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show/hide password field based on role selection
+            document.getElementById('login-role').addEventListener('change', function() {
+                const passwordField = document.getElementById('admin-password-field');
+                if (this.value === 'admin') {
+                    passwordField.style.display = 'block';
+                } else {
+                    passwordField.style.display = 'none';
+                }
+            });
+            
+            // Add item form handler
+            document.getElementById('add-item-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const item = {
+                    id: Date.now().toString(),
+                    brand: document.getElementById('brand').value,
+                    itemName: document.getElementById('item-name').value,
+                    mrp: parseFloat(document.getElementById('mrp').value),
+                    quantity: parseInt(document.getElementById('quantity').value),
+                    expiryDate: document.getElementById('expiry-date').value,
+                    addedBy: document.getElementById('staff-name').value,
+                    addedDate: new Date().toISOString(),
+                    status: 'upcoming',
+                    movedBy: null,
+                    movedDate: null,
+                    returnedBy: null,
+                    returnedDate: null
+                };
+                
+                items.push(item);
+                await saveData();
+                
+                this.reset();
+                // Pre-fill staff name again after reset
+                document.getElementById('staff-name').value = currentUser.name;
+                alert('Item added successfully!');
+                updateAllViews();
+            });
+
+            // Add brand form handler
+            document.getElementById('add-brand-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const brandName = document.getElementById('new-brand-name').value.trim();
+                
+                // Check for duplicates
+                if (brands.find(b => b.name.toLowerCase() === brandName.toLowerCase())) {
+                    alert('This brand already exists!');
+                    return;
+                }
+                
+                const brand = {
+                    id: Date.now().toString(),
+                    name: brandName,
+                    createdDate: new Date().toISOString()
+                };
+                
+                brands.push(brand);
+                await saveData();
+                
+                this.reset();
+                alert('Brand added successfully!');
+                updateBrandsList();
+                updateBrandDropdown();
+            });
+            
+            // Initialize
+            checkLogin();
+            loadData();
         });
         
         // Handle login
@@ -894,47 +962,9 @@
                 }
             } else {
                 // Show login modal
-                document.getElementById('login-modal').style.display = 'flex';
+                document.getElementById('login-modal').style.display = 'block';
             }
         }
-
-        // Storage helper with localStorage fallback
-        const storage = {
-            async get(key) {
-                try {
-                    // Try persistent storage first
-                    if (window.storage && window.storage.get) {
-                        const result = await window.storage.get(key);
-                        return result ? JSON.parse(result.value) : null;
-                    }
-                } catch (e) {
-                    // Fallback to localStorage
-                    const data = localStorage.getItem(key);
-                    return data ? JSON.parse(data) : null;
-                }
-                // Fallback to localStorage
-                const data = localStorage.getItem(key);
-                return data ? JSON.parse(data) : null;
-            },
-            async set(key, value) {
-                try {
-                    // Try persistent storage first
-                    if (window.storage && window.storage.set) {
-                        await window.storage.set(key, JSON.stringify(value));
-                        return;
-                    }
-                } catch (error) {
-                    // Fallback to localStorage
-                    localStorage.setItem(key, JSON.stringify(value));
-                }
-                // Fallback to localStorage
-                localStorage.setItem(key, JSON.stringify(value));
-            }
-        };
-
-        // Initialize data
-        let items = [];
-        let brands = [];
 
         // Load data on startup
         async function loadData() {
@@ -978,61 +1008,6 @@
             
             updateAllViews();
         }
-
-        // Add item
-        document.getElementById('add-item-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const item = {
-                id: Date.now().toString(),
-                brand: document.getElementById('brand').value,
-                itemName: document.getElementById('item-name').value,
-                mrp: parseFloat(document.getElementById('mrp').value),
-                quantity: parseInt(document.getElementById('quantity').value),
-                expiryDate: document.getElementById('expiry-date').value,
-                addedBy: document.getElementById('staff-name').value,
-                addedDate: new Date().toISOString(),
-                status: 'upcoming',
-                movedBy: null,
-                movedDate: null,
-                returnedBy: null,
-                returnedDate: null
-            };
-            
-            items.push(item);
-            await saveData();
-            
-            this.reset();
-            alert('Item added successfully!');
-            updateAllViews();
-        });
-
-        // Add brand
-        document.getElementById('add-brand-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const brandName = document.getElementById('new-brand-name').value.trim();
-            
-            // Check for duplicates
-            if (brands.find(b => b.name.toLowerCase() === brandName.toLowerCase())) {
-                alert('This brand already exists!');
-                return;
-            }
-            
-            const brand = {
-                id: Date.now().toString(),
-                name: brandName,
-                createdDate: new Date().toISOString()
-            };
-            
-            brands.push(brand);
-            await saveData();
-            
-            this.reset();
-            alert('Brand added successfully!');
-            updateBrandsList();
-            updateBrandDropdown();
-        });
 
         // Update brand dropdown
         function updateBrandDropdown() {
@@ -1629,10 +1604,6 @@
                 </div>
             `;
         }
-
-        // Initialize
-        checkLogin();
-        loadData();
     </script>
 </body>
 </html>
