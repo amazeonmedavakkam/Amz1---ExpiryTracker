@@ -1061,7 +1061,7 @@
         });
         
         // Handle login
-        function handleLogin() {
+        window.handleLogin = function() {
             const role = document.getElementById('login-role').value;
             const name = document.getElementById('login-name').value.trim();
             const password = document.getElementById('admin-password').value;
@@ -1113,18 +1113,16 @@
             
             // Load data
             loadData();
-        }
-        window.handleLogin = handleLogin;
+        };
         
         // Handle logout
-        function handleLogout() {
+        window.handleLogout = function() {
             if (confirm('Are you sure you want to logout?')) {
                 stopAutoRefresh();
                 localStorage.removeItem('currentUser');
                 location.reload();
             }
-        }
-        window.handleLogout = handleLogout;
+        };
         
         // Update UI based on user role
         function updateUserInterface() {
@@ -1330,7 +1328,8 @@
         }
 
         // Delete brand
-        async function deleteBrand(id) {
+        // Delete brand
+        window.deleteBrand = async function(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can delete brands');
                 return;
@@ -1352,12 +1351,11 @@
             await saveData();
             updateBrandsList();
             updateBrandDropdown();
-        }
-        window.deleteBrand = deleteBrand;
+        };
 
 
         // Reset item status (Admin only - for fixing stuck items)
-        async function resetItemStatus(id) {
+        window.resetItemStatus = async function(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can reset item status');
                 return;
@@ -1405,11 +1403,10 @@
             await saveData();
             await autoRefreshData();
             alert(`Item status reset to: ${newStatus}`);
-        }
-        window.resetItemStatus = resetItemStatus;
+        };
 
         // Edit item
-        async function editItem(id) {
+        window.editItem = async function(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can edit items');
                 return;
@@ -1438,11 +1435,10 @@
             await saveData();
             alert('Item updated successfully!');
             updateAllViews();
-        }
-        window.editItem = editItem;
+        };
 
         // Move to expiry area (with error handling)
-        async function moveToExpiryArea(id) {
+        window.moveToExpiryArea = async function(id) {
             console.log('=== moveToExpiryArea CALLED ===');
             console.log('Received ID:', id, 'Type:', typeof id);
             console.log('Items array length:', items.length);
@@ -1482,13 +1478,10 @@
                 console.error('Error moving item:', error);
                 alert('Failed to move item. Please try again.');
             }
-        }
-        
-        // Expose globally
-        window.moveToExpiryArea = moveToExpiryArea;
+        };
 
         // Mark as returned (with error handling)
-        async function markReturned(id) {
+        window.markReturned = async function(id) {
             try {
                 const item = items.find(i => i.id === id);
                 if (!item) {
@@ -1515,8 +1508,7 @@
                 console.error('Error marking returned:', error);
                 alert('Failed to mark as returned. Please try again.');
             }
-        }
-        window.markReturned = markReturned;
+        };
 
         // Update all views
         function updateAllViews() {
