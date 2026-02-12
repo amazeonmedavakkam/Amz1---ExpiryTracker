@@ -490,7 +490,6 @@
 </head>
 <body>
     <!-- Login Modal -->
-    <!-- NOTE: To show your logo, place "Logo_HD.jpg" in the same folder as this HTML file -->
     <div id="login-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
         <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: 10% auto;">
             <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">🛒 Amaze On's Expiry Tracker</h2>
@@ -516,10 +515,7 @@
 
     <div class="header">
         <div class="header-content">
-            <img src="Logo_HD.jpg" alt="Amaze On Logo" class="header-logo" id="header-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
-            <div id="logo-fallback" style="display: none; background: white; padding: 0.5rem 1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-family: 'Gill Sans', 'Gill Sans MT', serif; font-size: 1.5rem; font-weight: bold; color: #2d6a4f;">
-                🛒 AMAZE ON
-            </div>
+            <img src="Logo_HD.jpg" alt="Amaze On Logo" class="header-logo" id="header-logo">
             <div class="header-text">
                 <h1>Expiry Tracker</h1>
             </div>
@@ -833,10 +829,6 @@
                     <h3>Total Expiry Area Worth</h3>
                     <div class="value" id="total-expiry-worth">₹0</div>
                 </div>
-                <div class="stat-card">
-                    <h3>At Risk Worth (30 Days)</h3>
-                    <div class="value" id="total-at-risk-worth">₹0</div>
-                </div>
             </div>
 
             <div class="card">
@@ -856,42 +848,6 @@
                 </div>
                 
                 <div id="trend-chart" style="margin-top: 2rem;"></div>
-            </div>
-
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>At Risk Value Trend (Upcoming 30 Days)</h2>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeAtRiskTrendView('day')" id="at-risk-trend-day-btn">Daily</button>
-                        <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeAtRiskTrendView('week')" id="at-risk-trend-week-btn">Weekly</button>
-                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeAtRiskTrendView('month')" id="at-risk-trend-month-btn">Monthly</button>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
-                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollAtRiskTrendData('prev')" id="at-risk-trend-prev-btn">← Previous</button>
-                    <span id="at-risk-trend-range-display" style="font-weight: 500; flex: 1; text-align: center;"></span>
-                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollAtRiskTrendData('next')" id="at-risk-trend-next-btn">Next →</button>
-                </div>
-                
-                <div id="at-risk-trend-chart" style="margin-top: 2rem;"></div>
-            </div>
-
-            <div class="card">
-                <h2>At Risk Period Breakdown</h2>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Period</th>
-                                <th>Items Count</th>
-                                <th>Total Quantity</th>
-                                <th>Total Worth (₹)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="at-risk-period-breakdown"></tbody>
-                    </table>
-                </div>
             </div>
 
             <div class="card">
@@ -1013,12 +969,9 @@
         let trendView = 'week'; // 'day', 'week', or 'month'
         let trendOffset = 0; // How many periods to scroll back
         
-        // At-risk trend view state
-        let atRiskTrendView = 'week';
-        let atRiskTrendOffset = 0;
-        
-        // Initialize login modal and role listener 
-        function initializeLoginHandlers() {
+        // Initialize login modal and role listener IMMEDIATELY (not waiting for DOMContentLoaded)
+        // This ensures the password field toggle works right away
+        setTimeout(function() {
             const loginRole = document.getElementById('login-role');
             const passwordField = document.getElementById('admin-password-field');
             const errorMsg = document.getElementById('login-error');
@@ -1042,69 +995,7 @@
             
             // Check login status immediately
             checkLogin();
-        }
-        
-        // Try to initialize immediately and also on DOMContentLoaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeLoginHandlers);
-        } else {
-            initializeLoginHandlers();
-        }
-        
-        // Handle login - defined early to ensure it's available when page loads
-        window.handleLogin = function() {
-            const role = document.getElementById('login-role').value;
-            const name = document.getElementById('login-name').value.trim();
-            const password = document.getElementById('admin-password').value;
-            const errorMsg = document.getElementById('login-error');
-            
-            // Clear previous errors
-            errorMsg.textContent = '';
-            errorMsg.style.display = 'none';
-            
-            // Validate name
-            if (!name) {
-                errorMsg.textContent = 'Please enter your name';
-                errorMsg.style.display = 'block';
-                return;
-            }
-            
-            // Validate admin password
-            if (role === 'admin' && password !== ADMIN_PASSWORD) {
-                errorMsg.textContent = 'Incorrect admin password';
-                errorMsg.style.display = 'block';
-                return;
-            }
-            
-            // Create user session
-            currentUser = {
-                name: name,
-                role: role,
-                loggedIn: true
-            };
-            
-            // Save to localStorage (persists across refreshes)
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            // Hide login modal
-            document.getElementById('login-modal').style.display = 'none';
-            
-            // Update UI
-            updateUserInterface();
-            
-            // Pre-fill staff name in forms
-            const staffNameField = document.getElementById('staff-name');
-            if (staffNameField) {
-                staffNameField.value = name;
-                staffNameField.readOnly = true;
-            }
-            
-            // Start auto-refresh
-            startAutoRefresh();
-            
-            // Load data
-            loadData();
-        }
+        }, 0);
         
         // Wait for DOM to be ready for form handlers
         document.addEventListener('DOMContentLoaded', function() {
@@ -1169,8 +1060,63 @@
             loadData();
         });
         
+        // Handle login
+        function handleLogin() {
+            const role = document.getElementById('login-role').value;
+            const name = document.getElementById('login-name').value.trim();
+            const password = document.getElementById('admin-password').value;
+            const errorMsg = document.getElementById('login-error');
+            
+            // Clear previous errors
+            errorMsg.textContent = '';
+            errorMsg.style.display = 'none';
+            
+            // Validate name
+            if (!name) {
+                errorMsg.textContent = 'Please enter your name';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // Validate admin password
+            if (role === 'admin' && password !== ADMIN_PASSWORD) {
+                errorMsg.textContent = 'Incorrect admin password';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // Create user session
+            currentUser = {
+                name: name,
+                role: role,
+                loggedIn: true
+            };
+            
+            // Save to localStorage (persists across refreshes)
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Hide login modal
+            document.getElementById('login-modal').style.display = 'none';
+            
+            // Update UI
+            updateUserInterface();
+            
+            // Pre-fill staff name in forms
+            const staffNameField = document.getElementById('staff-name');
+            if (staffNameField) {
+                staffNameField.value = name;
+                staffNameField.readOnly = true;
+            }
+            
+            // Start auto-refresh
+            startAutoRefresh();
+            
+            // Load data
+            loadData();
+        }
+        
         // Handle logout
-        window.handleLogout = function() {
+        function handleLogout() {
             if (confirm('Are you sure you want to logout?')) {
                 stopAutoRefresh();
                 localStorage.removeItem('currentUser');
@@ -1260,10 +1206,8 @@
         }
         
         // Auto-refresh data from server
-        let isManualUpdate = false; // Flag to prevent refresh during manual updates
-        
         async function autoRefreshData() {
-            if (!currentUser.loggedIn || isManualUpdate) return;
+            if (!currentUser.loggedIn) return;
             
             try {
                 const syncStatus = document.getElementById('sync-status');
@@ -1336,16 +1280,15 @@
         }
 
         // Tab switching (with auto-refresh)
-        // Switch tab
-        window.switchTab = async function(tab) {
+        async function switchTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             
             event.target.classList.add('active');
             document.getElementById(tab + '-tab').classList.add('active');
             
-            // Update views when switching tabs
-            updateAllViews();
+            // Refresh data when switching tabs for real-time updates
+            await autoRefreshData();
         }
 
         // Update brand dropdown
@@ -1385,18 +1328,14 @@
         }
 
         // Delete brand
-        // Delete brand
-        window.deleteBrand = async function(id) {
+        async function deleteBrand(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can delete brands');
                 return;
             }
             
             const brand = brands.find(b => b.id === id);
-            if (!brand) {
-                alert('Error: Brand not found.');
-                return;
-            }
+            if (!brand) return;
             
             // Check if brand is in use
             const inUse = items.some(item => item.brand === brand.name);
@@ -1414,154 +1353,101 @@
         }
 
         // Reset item status (Admin only - for fixing stuck items)
-        // Reset item status
-        window.resetItemStatus = async function(id) {
-            isManualUpdate = true;
-            
+        async function resetItemStatus(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can reset item status');
-                isManualUpdate = false;
                 return;
             }
             
-            try {
-                const item = items.find(i => i.id === id);
-                if (!item) {
-                    alert('Error: Item not found.');
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n\nEnter new status:`);
-                
-                if (!newStatus) {
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                const validStatuses = ['upcoming', 'expiry-area', 'returned'];
-                if (!validStatuses.includes(newStatus)) {
-                    alert('Invalid status. Must be: upcoming, expiry-area, or returned');
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                // Update status and related fields
-                item.status = newStatus;
-                
-                if (newStatus === 'upcoming') {
-                    item.movedBy = null;
-                    item.movedDate = null;
-                    item.returnedBy = null;
-                    item.returnedDate = null;
-                } else if (newStatus === 'expiry-area') {
-                    if (!item.movedBy) {
-                        item.movedBy = currentUser.name;
-                        item.movedDate = new Date().toISOString();
-                    }
-                    item.returnedBy = null;
-                    item.returnedDate = null;
-                } else if (newStatus === 'returned') {
-                    if (!item.movedBy) {
-                        item.movedBy = currentUser.name;
-                        item.movedDate = new Date().toISOString();
-                    }
-                    if (!item.returnedBy) {
-                        item.returnedBy = currentUser.name;
-                        item.returnedDate = new Date().toISOString();
-                    }
-                }
-                
-                await saveData();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                updateAllViews();
-                alert(`Item status reset to: ${newStatus}`);
-            } finally {
-                isManualUpdate = false;
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+            const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n\nEnter new status:`);
+            
+            if (!newStatus) return;
+            
+            const validStatuses = ['upcoming', 'expiry-area', 'returned'];
+            if (!validStatuses.includes(newStatus)) {
+                alert('Invalid status. Must be: upcoming, expiry-area, or returned');
+                return;
             }
+            
+            // Update status and related fields
+            item.status = newStatus;
+            
+            if (newStatus === 'upcoming') {
+                item.movedBy = null;
+                item.movedDate = null;
+                item.returnedBy = null;
+                item.returnedDate = null;
+            } else if (newStatus === 'expiry-area') {
+                if (!item.movedBy) {
+                    item.movedBy = currentUser.name;
+                    item.movedDate = new Date().toISOString();
+                }
+                item.returnedBy = null;
+                item.returnedDate = null;
+            } else if (newStatus === 'returned') {
+                if (!item.movedBy) {
+                    item.movedBy = currentUser.name;
+                    item.movedDate = new Date().toISOString();
+                }
+                if (!item.returnedBy) {
+                    item.returnedBy = currentUser.name;
+                    item.returnedDate = new Date().toISOString();
+                }
+            }
+            
+            await saveData();
+            await autoRefreshData();
+            alert(`Item status reset to: ${newStatus}`);
         }
 
         // Edit item
-        window.editItem = async function(id) {
-            isManualUpdate = true;
-            
+        async function editItem(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can edit items');
-                isManualUpdate = false;
                 return;
             }
             
-            try {
-                const item = items.find(i => i.id === id);
-                if (!item) {
-                    alert('Error: Item not found.');
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                const itemName = prompt('Item Name:', item.itemName || '');
-                if (itemName === null) {
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                const mrp = prompt('MRP (₹):', item.mrp);
-                if (mrp === null) {
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                const quantity = prompt('Quantity:', item.quantity);
-                if (quantity === null) {
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                const expiryDate = prompt('Expiry Date (YYYY-MM-DD):', item.expiryDate);
-                if (expiryDate === null) {
-                    isManualUpdate = false;
-                    return;
-                }
-                
-                item.itemName = itemName || item.itemName;
-                item.mrp = parseFloat(mrp) || item.mrp;
-                item.quantity = parseInt(quantity) || item.quantity;
-                item.expiryDate = expiryDate || item.expiryDate;
-                
-                await saveData();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                alert('Item updated successfully!');
-                updateAllViews();
-            } finally {
-                isManualUpdate = false;
-            }
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+            const itemName = prompt('Item Name:', item.itemName || '');
+            if (itemName === null) return;
+            
+            const mrp = prompt('MRP (₹):', item.mrp);
+            if (mrp === null) return;
+            
+            const quantity = prompt('Quantity:', item.quantity);
+            if (quantity === null) return;
+            
+            const expiryDate = prompt('Expiry Date (YYYY-MM-DD):', item.expiryDate);
+            if (expiryDate === null) return;
+            
+            item.itemName = itemName || item.itemName;
+            item.mrp = parseFloat(mrp) || item.mrp;
+            item.quantity = parseInt(quantity) || item.quantity;
+            item.expiryDate = expiryDate || item.expiryDate;
+            
+            await saveData();
+            alert('Item updated successfully!');
+            updateAllViews();
         }
 
         // Move to expiry area (with error handling)
-        window.moveToExpiryArea = async function(id) {
-            isManualUpdate = true; // Block auto-refresh during this operation
-            
+        async function moveToExpiryArea(id) {
             try {
-                console.log('moveToExpiryArea called with id:', id);
-                console.log('Total items:', items.length);
-                console.log('All item IDs:', items.map(i => i.id));
-                
                 const item = items.find(i => i.id === id);
-                
                 if (!item) {
-                    console.error('Item not found! Looking for ID:', id);
-                    console.error('Available items:', items);
-                    alert('Error: Item not found. ID: ' + id + '\nTotal items: ' + items.length);
-                    isManualUpdate = false;
+                    alert('Error: Item not found. Please refresh the page.');
+                    await autoRefreshData();
                     return;
                 }
                 
-                console.log('Found item:', item);
-                
                 if (item.status !== 'upcoming') {
-                    alert(`This item is already in ${item.status} status.`);
-                    updateAllViews();
-                    isManualUpdate = false;
+                    alert(`This item is already in ${item.status} status. Refreshing data...`);
+                    await autoRefreshData();
                     return;
                 }
                 
@@ -1569,40 +1455,29 @@
                 item.movedBy = currentUser.name;
                 item.movedDate = new Date().toISOString();
                 
-                console.log('Item updated, saving...');
                 await saveData();
-                console.log('Data saved successfully');
-                
-                // Wait a moment to ensure save is complete
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                updateAllViews();
+                await autoRefreshData();
                 
                 alert('Item moved to expiry area successfully!');
             } catch (error) {
                 console.error('Error moving item:', error);
-                alert('Failed to move item. Error: ' + error.message);
-            } finally {
-                isManualUpdate = false; // Re-enable auto-refresh
+                alert('Failed to move item. Please try again.');
             }
         }
 
         // Mark as returned (with error handling)
-        window.markReturned = async function(id) {
-            isManualUpdate = true;
-            
+        async function markReturned(id) {
             try {
                 const item = items.find(i => i.id === id);
                 if (!item) {
                     alert('Error: Item not found. Please refresh the page.');
-                    isManualUpdate = false;
+                    await autoRefreshData();
                     return;
                 }
                 
                 if (item.status !== 'expiry-area') {
-                    alert(`This item is in ${item.status} status, not in expiry area.`);
-                    updateAllViews();
-                    isManualUpdate = false;
+                    alert(`This item is in ${item.status} status, not in expiry area. Refreshing data...`);
+                    await autoRefreshData();
                     return;
                 }
                 
@@ -1611,15 +1486,12 @@
                 item.returnedDate = new Date().toISOString();
                 
                 await saveData();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                updateAllViews();
+                await autoRefreshData();
                 
                 alert('Item marked as returned successfully!');
             } catch (error) {
                 console.error('Error marking returned:', error);
                 alert('Failed to mark as returned. Please try again.');
-            } finally {
-                isManualUpdate = false;
             }
         }
 
@@ -1637,7 +1509,7 @@
         }
 
         // Change trend view
-        window.changeTrendView = function(view) {
+        function changeTrendView(view) {
             trendView = view;
             trendOffset = 0; // Reset to current period
             
@@ -1651,7 +1523,7 @@
         }
         
         // Scroll trend data
-        window.scrollTrendData = function(direction) {
+        function scrollTrendData(direction) {
             if (direction === 'prev') {
                 trendOffset++;
             } else if (direction === 'next' && trendOffset > 0) {
@@ -1828,9 +1700,6 @@
             
             // Disable Next button if at current period
             document.getElementById('trend-next-btn').disabled = trendOffset === 0;
-            
-            // Update at-risk analytics
-            updateAtRiskAnalyticsView();
         }
         
         // Helper function to get week start (Monday)
@@ -1839,170 +1708,6 @@
             const day = d.getDay();
             const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
             return new Date(d.setDate(diff));
-        }
-
-        // ===== AT-RISK ANALYTICS FUNCTIONS =====
-        
-        // Update at-risk analytics view (items expiring within 30 days)
-        function updateAtRiskAnalyticsView() {
-            const atRiskItems = items.filter(item => {
-                const days = daysUntilExpiry(item.expiryDate);
-                return item.status === 'upcoming' && days <= 30 && days >= 0;
-            });
-            
-            // Calculate total at-risk worth
-            const totalAtRiskWorth = atRiskItems.reduce((sum, item) => 
-                sum + (item.mrp * item.quantity), 0);
-            
-            document.getElementById('total-at-risk-worth').textContent = `₹${totalAtRiskWorth.toFixed(2)}`;
-            
-            // Group by selected period based on expiry date
-            const { startDate, endDate } = getAtRiskDateRange();
-            const periodData = {};
-            
-            // Initialize all periods in range with zero values
-            const currentDate = new Date(startDate);
-            while (currentDate <= endDate) {
-                const key = getPeriodKey(currentDate, atRiskTrendView);
-                if (!periodData[key]) {
-                    periodData[key] = {
-                        items: [],
-                        count: 0,
-                        quantity: 0,
-                        worth: 0,
-                        date: new Date(currentDate)
-                    };
-                }
-                
-                // Move to next period
-                if (atRiskTrendView === 'day') {
-                    currentDate.setDate(currentDate.getDate() + 1);
-                } else if (atRiskTrendView === 'week') {
-                    currentDate.setDate(currentDate.getDate() + 7);
-                } else {
-                    currentDate.setMonth(currentDate.getMonth() + 1);
-                }
-            }
-            
-            // Populate with actual data (group by expiry date)
-            atRiskItems.forEach(item => {
-                const expiryDate = new Date(item.expiryDate);
-                if (expiryDate < startDate || expiryDate > endDate) return;
-                
-                const key = getPeriodKey(expiryDate, atRiskTrendView);
-                
-                if (periodData[key]) {
-                    periodData[key].items.push(item);
-                    periodData[key].count++;
-                    periodData[key].quantity += item.quantity;
-                    periodData[key].worth += item.mrp * item.quantity;
-                }
-            });
-            
-            // Update range display
-            const rangeDisplay = document.getElementById('at-risk-trend-range-display');
-            rangeDisplay.textContent = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-            
-            // Create chart
-            const sortedKeys = Object.keys(periodData).sort();
-            const maxWorth = Math.max(...Object.values(periodData).map(p => p.worth), 1);
-            
-            const chartHTML = `
-                <div class="chart-wrapper">
-                    ${sortedKeys.map(key => {
-                        const data = periodData[key];
-                        const height = (data.worth / maxWorth) * 200;
-                        const label = formatPeriodLabel(data.date, atRiskTrendView);
-                        return `
-                            <div class="chart-bar" style="height: ${height}px; width: ${Math.max(40, 600/sortedKeys.length)}px; background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);">
-                                <div class="chart-value">₹${data.worth.toFixed(0)}</div>
-                                <div class="chart-label">${label}</div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-            
-            document.getElementById('at-risk-trend-chart').innerHTML = sortedKeys.length > 0 ? chartHTML : 
-                '<div class="empty-state">No at-risk items to display</div>';
-            
-            // Update breakdown table
-            const tbody = document.getElementById('at-risk-period-breakdown');
-            if (sortedKeys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div>No at-risk data for selected period</div></td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = sortedKeys.map(key => {
-                const data = periodData[key];
-                const label = formatPeriodLabel(data.date, atRiskTrendView);
-                return `
-                    <tr>
-                        <td>${label}</td>
-                        <td>${data.count}</td>
-                        <td>${data.quantity}</td>
-                        <td><strong>₹${data.worth.toFixed(2)}</strong></td>
-                    </tr>
-                `;
-            }).join('');
-            
-            // Disable Next button if at current period
-            document.getElementById('at-risk-trend-next-btn').disabled = atRiskTrendOffset === 0;
-        }
-        
-        // Change at-risk trend view
-        window.changeAtRiskTrendView = function(view) {
-            atRiskTrendView = view;
-            atRiskTrendOffset = 0; // Reset to current period
-            
-            // Update button styles
-            document.getElementById('at-risk-trend-day-btn').className = 'btn';
-            document.getElementById('at-risk-trend-week-btn').className = 'btn';
-            document.getElementById('at-risk-trend-month-btn').className = 'btn';
-            document.getElementById(`at-risk-trend-${view}-btn`).className = 'btn btn-primary';
-            
-            updateAtRiskAnalyticsView();
-        }
-        
-        // Scroll at-risk trend data
-        window.scrollAtRiskTrendData = function(direction) {
-            if (direction === 'prev') {
-                atRiskTrendOffset++;
-            } else if (direction === 'next' && atRiskTrendOffset > 0) {
-                atRiskTrendOffset--;
-            }
-            updateAtRiskAnalyticsView();
-        }
-        
-        // Get date range for at-risk view
-        function getAtRiskDateRange() {
-            const today = new Date();
-            let startDate, endDate, periods;
-            
-            if (atRiskTrendView === 'day') {
-                // Show 7 days
-                periods = 7;
-                endDate = new Date(today);
-                endDate.setDate(endDate.getDate() - (atRiskTrendOffset * periods));
-                startDate = new Date(endDate);
-                startDate.setDate(startDate.getDate() - (periods - 1));
-            } else if (atRiskTrendView === 'week') {
-                // Show 7 weeks
-                periods = 7;
-                endDate = getWeekStart(today);
-                endDate.setDate(endDate.getDate() - (atRiskTrendOffset * periods * 7) + 6);
-                startDate = new Date(endDate);
-                startDate.setDate(startDate.getDate() - (periods * 7 - 1));
-            } else {
-                // Show 6 months
-                periods = 6;
-                endDate = new Date(today.getFullYear(), today.getMonth() - atRiskTrendOffset * periods + 1, 0);
-                startDate = new Date(endDate);
-                startDate.setMonth(startDate.getMonth() - (periods - 1));
-                startDate.setDate(1);
-            }
-            
-            return { startDate, endDate, periods };
         }
 
         // Update master data view
@@ -2095,7 +1800,7 @@
         }
         
         // Export to CSV
-        window.exportToCSV = function() {
+        function exportToCSV() {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can export data');
                 return;
