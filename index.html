@@ -1114,6 +1114,7 @@
             // Load data
             loadData();
         }
+        window.handleLogin = handleLogin;
         
         // Handle logout
         function handleLogout() {
@@ -1123,6 +1124,7 @@
                 location.reload();
             }
         }
+        window.handleLogout = handleLogout;
         
         // Update UI based on user role
         function updateUserInterface() {
@@ -1351,6 +1353,8 @@
             updateBrandsList();
             updateBrandDropdown();
         }
+        window.deleteBrand = deleteBrand;
+
 
         // Reset item status (Admin only - for fixing stuck items)
         async function resetItemStatus(id) {
@@ -1402,6 +1406,7 @@
             await autoRefreshData();
             alert(`Item status reset to: ${newStatus}`);
         }
+        window.resetItemStatus = resetItemStatus;
 
         // Edit item
         async function editItem(id) {
@@ -1434,16 +1439,28 @@
             alert('Item updated successfully!');
             updateAllViews();
         }
+        window.editItem = editItem;
 
         // Move to expiry area (with error handling)
         async function moveToExpiryArea(id) {
+            console.log('=== moveToExpiryArea CALLED ===');
+            console.log('Received ID:', id, 'Type:', typeof id);
+            console.log('Items array length:', items.length);
+            console.log('Items array:', items);
+            
             try {
                 const item = items.find(i => i.id === id);
+                
                 if (!item) {
-                    alert('Error: Item not found. Please refresh the page.');
+                    console.error('ITEM NOT FOUND!');
+                    console.error('Looking for ID:', id);
+                    console.error('Available IDs:', items.map(i => ({id: i.id, brand: i.brand, status: i.status})));
+                    alert('Error: Item not found.\n\nLooking for: ' + id + '\nTotal items: ' + items.length + '\n\nCheck console for details.');
                     await autoRefreshData();
                     return;
                 }
+                
+                console.log('Found item:', item);
                 
                 if (item.status !== 'upcoming') {
                     alert(`This item is already in ${item.status} status. Refreshing data...`);
@@ -1455,7 +1472,9 @@
                 item.movedBy = currentUser.name;
                 item.movedDate = new Date().toISOString();
                 
+                console.log('Saving data...');
                 await saveData();
+                console.log('Refreshing view...');
                 await autoRefreshData();
                 
                 alert('Item moved to expiry area successfully!');
@@ -1464,6 +1483,9 @@
                 alert('Failed to move item. Please try again.');
             }
         }
+        
+        // Expose globally
+        window.moveToExpiryArea = moveToExpiryArea;
 
         // Mark as returned (with error handling)
         async function markReturned(id) {
@@ -1494,6 +1516,7 @@
                 alert('Failed to mark as returned. Please try again.');
             }
         }
+        window.markReturned = markReturned;
 
         // Update all views
         function updateAllViews() {
