@@ -1260,8 +1260,10 @@
         }
         
         // Auto-refresh data from server
+        let isManualUpdate = false; // Flag to prevent refresh during manual updates
+        
         async function autoRefreshData() {
-            if (!currentUser.loggedIn) return;
+            if (!currentUser.loggedIn || isManualUpdate) return;
             
             try {
                 const syncStatus = document.getElementById('sync-status');
@@ -1414,105 +1416,152 @@
         // Reset item status (Admin only - for fixing stuck items)
         // Reset item status
         window.resetItemStatus = async function(id) {
+            isManualUpdate = true;
+            
             if (currentUser.role !== 'admin') {
                 alert('Only admins can reset item status');
+                isManualUpdate = false;
                 return;
             }
             
-            const item = items.find(i => i.id === id);
-            if (!item) {
-                alert('Error: Item not found.');
-                return;
-            }
-            
-            const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n\nEnter new status:`);
-            
-            if (!newStatus) return;
-            
-            const validStatuses = ['upcoming', 'expiry-area', 'returned'];
-            if (!validStatuses.includes(newStatus)) {
-                alert('Invalid status. Must be: upcoming, expiry-area, or returned');
-                return;
-            }
-            
-            // Update status and related fields
-            item.status = newStatus;
-            
-            if (newStatus === 'upcoming') {
-                item.movedBy = null;
-                item.movedDate = null;
-                item.returnedBy = null;
-                item.returnedDate = null;
-            } else if (newStatus === 'expiry-area') {
-                if (!item.movedBy) {
-                    item.movedBy = currentUser.name;
-                    item.movedDate = new Date().toISOString();
+            try {
+                const item = items.find(i => i.id === id);
+                if (!item) {
+                    alert('Error: Item not found.');
+                    isManualUpdate = false;
+                    return;
                 }
-                item.returnedBy = null;
-                item.returnedDate = null;
-            } else if (newStatus === 'returned') {
-                if (!item.movedBy) {
-                    item.movedBy = currentUser.name;
-                    item.movedDate = new Date().toISOString();
+                
+                const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n\nEnter new status:`);
+                
+                if (!newStatus) {
+                    isManualUpdate = false;
+                    return;
                 }
-                if (!item.returnedBy) {
-                    item.returnedBy = currentUser.name;
-                    item.returnedDate = new Date().toISOString();
+                
+                const validStatuses = ['upcoming', 'expiry-area', 'returned'];
+                if (!validStatuses.includes(newStatus)) {
+                    alert('Invalid status. Must be: upcoming, expiry-area, or returned');
+                    isManualUpdate = false;
+                    return;
                 }
+                
+                // Update status and related fields
+                item.status = newStatus;
+                
+                if (newStatus === 'upcoming') {
+                    item.movedBy = null;
+                    item.movedDate = null;
+                    item.returnedBy = null;
+                    item.returnedDate = null;
+                } else if (newStatus === 'expiry-area') {
+                    if (!item.movedBy) {
+                        item.movedBy = currentUser.name;
+                        item.movedDate = new Date().toISOString();
+                    }
+                    item.returnedBy = null;
+                    item.returnedDate = null;
+                } else if (newStatus === 'returned') {
+                    if (!item.movedBy) {
+                        item.movedBy = currentUser.name;
+                        item.movedDate = new Date().toISOString();
+                    }
+                    if (!item.returnedBy) {
+                        item.returnedBy = currentUser.name;
+                        item.returnedDate = new Date().toISOString();
+                    }
+                }
+                
+                await saveData();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                updateAllViews();
+                alert(`Item status reset to: ${newStatus}`);
+            } finally {
+                isManualUpdate = false;
             }
-            
-            await saveData();
-            updateAllViews();
-            alert(`Item status reset to: ${newStatus}`);
         }
 
         // Edit item
         window.editItem = async function(id) {
+            isManualUpdate = true;
+            
             if (currentUser.role !== 'admin') {
                 alert('Only admins can edit items');
+                isManualUpdate = false;
                 return;
             }
             
-            const item = items.find(i => i.id === id);
-            if (!item) {
-                alert('Error: Item not found.');
-                return;
+            try {
+                const item = items.find(i => i.id === id);
+                if (!item) {
+                    alert('Error: Item not found.');
+                    isManualUpdate = false;
+                    return;
+                }
+                
+                const itemName = prompt('Item Name:', item.itemName || '');
+                if (itemName === null) {
+                    isManualUpdate = false;
+                    return;
+                }
+                
+                const mrp = prompt('MRP (₹):', item.mrp);
+                if (mrp === null) {
+                    isManualUpdate = false;
+                    return;
+                }
+                
+                const quantity = prompt('Quantity:', item.quantity);
+                if (quantity === null) {
+                    isManualUpdate = false;
+                    return;
+                }
+                
+                const expiryDate = prompt('Expiry Date (YYYY-MM-DD):', item.expiryDate);
+                if (expiryDate === null) {
+                    isManualUpdate = false;
+                    return;
+                }
+                
+                item.itemName = itemName || item.itemName;
+                item.mrp = parseFloat(mrp) || item.mrp;
+                item.quantity = parseInt(quantity) || item.quantity;
+                item.expiryDate = expiryDate || item.expiryDate;
+                
+                await saveData();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                alert('Item updated successfully!');
+                updateAllViews();
+            } finally {
+                isManualUpdate = false;
             }
-            
-            const itemName = prompt('Item Name:', item.itemName || '');
-            if (itemName === null) return;
-            
-            const mrp = prompt('MRP (₹):', item.mrp);
-            if (mrp === null) return;
-            
-            const quantity = prompt('Quantity:', item.quantity);
-            if (quantity === null) return;
-            
-            const expiryDate = prompt('Expiry Date (YYYY-MM-DD):', item.expiryDate);
-            if (expiryDate === null) return;
-            
-            item.itemName = itemName || item.itemName;
-            item.mrp = parseFloat(mrp) || item.mrp;
-            item.quantity = parseInt(quantity) || item.quantity;
-            item.expiryDate = expiryDate || item.expiryDate;
-            
-            await saveData();
-            alert('Item updated successfully!');
-            updateAllViews();
         }
 
         // Move to expiry area (with error handling)
         window.moveToExpiryArea = async function(id) {
+            isManualUpdate = true; // Block auto-refresh during this operation
+            
             try {
+                console.log('moveToExpiryArea called with id:', id);
+                console.log('Total items:', items.length);
+                console.log('All item IDs:', items.map(i => i.id));
+                
                 const item = items.find(i => i.id === id);
+                
                 if (!item) {
-                    alert('Error: Item not found. Please refresh the page.');
+                    console.error('Item not found! Looking for ID:', id);
+                    console.error('Available items:', items);
+                    alert('Error: Item not found. ID: ' + id + '\nTotal items: ' + items.length);
+                    isManualUpdate = false;
                     return;
                 }
+                
+                console.log('Found item:', item);
                 
                 if (item.status !== 'upcoming') {
                     alert(`This item is already in ${item.status} status.`);
                     updateAllViews();
+                    isManualUpdate = false;
                     return;
                 }
                 
@@ -1520,28 +1569,40 @@
                 item.movedBy = currentUser.name;
                 item.movedDate = new Date().toISOString();
                 
+                console.log('Item updated, saving...');
                 await saveData();
+                console.log('Data saved successfully');
+                
+                // Wait a moment to ensure save is complete
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
                 updateAllViews();
                 
                 alert('Item moved to expiry area successfully!');
             } catch (error) {
                 console.error('Error moving item:', error);
-                alert('Failed to move item. Please try again.');
+                alert('Failed to move item. Error: ' + error.message);
+            } finally {
+                isManualUpdate = false; // Re-enable auto-refresh
             }
         }
 
         // Mark as returned (with error handling)
         window.markReturned = async function(id) {
+            isManualUpdate = true;
+            
             try {
                 const item = items.find(i => i.id === id);
                 if (!item) {
                     alert('Error: Item not found. Please refresh the page.');
+                    isManualUpdate = false;
                     return;
                 }
                 
                 if (item.status !== 'expiry-area') {
                     alert(`This item is in ${item.status} status, not in expiry area.`);
                     updateAllViews();
+                    isManualUpdate = false;
                     return;
                 }
                 
@@ -1550,12 +1611,15 @@
                 item.returnedDate = new Date().toISOString();
                 
                 await saveData();
+                await new Promise(resolve => setTimeout(resolve, 500));
                 updateAllViews();
                 
                 alert('Item marked as returned successfully!');
             } catch (error) {
                 console.error('Error marking returned:', error);
                 alert('Failed to mark as returned. Please try again.');
+            } finally {
+                isManualUpdate = false;
             }
         }
 
