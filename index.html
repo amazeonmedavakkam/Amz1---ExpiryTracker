@@ -1334,15 +1334,16 @@
         }
 
         // Tab switching (with auto-refresh)
-        async function switchTab(tab) {
+        // Switch tab
+        window.switchTab = async function(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             
             event.target.classList.add('active');
             document.getElementById(tab + '-tab').classList.add('active');
             
-            // Refresh data when switching tabs for real-time updates
-            await autoRefreshData();
+            // Update views when switching tabs
+            updateAllViews();
         }
 
         // Update brand dropdown
@@ -1382,14 +1383,18 @@
         }
 
         // Delete brand
-        async function deleteBrand(id) {
+        // Delete brand
+        window.deleteBrand = async function(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can delete brands');
                 return;
             }
             
             const brand = brands.find(b => b.id === id);
-            if (!brand) return;
+            if (!brand) {
+                alert('Error: Brand not found.');
+                return;
+            }
             
             // Check if brand is in use
             const inUse = items.some(item => item.brand === brand.name);
@@ -1407,14 +1412,18 @@
         }
 
         // Reset item status (Admin only - for fixing stuck items)
-        async function resetItemStatus(id) {
+        // Reset item status
+        window.resetItemStatus = async function(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can reset item status');
                 return;
             }
             
             const item = items.find(i => i.id === id);
-            if (!item) return;
+            if (!item) {
+                alert('Error: Item not found.');
+                return;
+            }
             
             const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n\nEnter new status:`);
             
@@ -1453,19 +1462,22 @@
             }
             
             await saveData();
-            await autoRefreshData();
+            updateAllViews();
             alert(`Item status reset to: ${newStatus}`);
         }
 
         // Edit item
-        async function editItem(id) {
+        window.editItem = async function(id) {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can edit items');
                 return;
             }
             
             const item = items.find(i => i.id === id);
-            if (!item) return;
+            if (!item) {
+                alert('Error: Item not found.');
+                return;
+            }
             
             const itemName = prompt('Item Name:', item.itemName || '');
             if (itemName === null) return;
@@ -1490,7 +1502,7 @@
         }
 
         // Move to expiry area (with error handling)
-        async function moveToExpiryArea(id) {
+        window.moveToExpiryArea = async function(id) {
             try {
                 const item = items.find(i => i.id === id);
                 if (!item) {
@@ -1519,7 +1531,7 @@
         }
 
         // Mark as returned (with error handling)
-        async function markReturned(id) {
+        window.markReturned = async function(id) {
             try {
                 const item = items.find(i => i.id === id);
                 if (!item) {
@@ -1561,7 +1573,7 @@
         }
 
         // Change trend view
-        function changeTrendView(view) {
+        window.changeTrendView = function(view) {
             trendView = view;
             trendOffset = 0; // Reset to current period
             
@@ -1575,7 +1587,7 @@
         }
         
         // Scroll trend data
-        function scrollTrendData(direction) {
+        window.scrollTrendData = function(direction) {
             if (direction === 'prev') {
                 trendOffset++;
             } else if (direction === 'next' && trendOffset > 0) {
@@ -1875,7 +1887,7 @@
         }
         
         // Change at-risk trend view
-        function changeAtRiskTrendView(view) {
+        window.changeAtRiskTrendView = function(view) {
             atRiskTrendView = view;
             atRiskTrendOffset = 0; // Reset to current period
             
@@ -1889,7 +1901,7 @@
         }
         
         // Scroll at-risk trend data
-        function scrollAtRiskTrendData(direction) {
+        window.scrollAtRiskTrendData = function(direction) {
             if (direction === 'prev') {
                 atRiskTrendOffset++;
             } else if (direction === 'next' && atRiskTrendOffset > 0) {
@@ -2019,7 +2031,7 @@
         }
         
         // Export to CSV
-        function exportToCSV() {
+        window.exportToCSV = function() {
             if (currentUser.role !== 'admin') {
                 alert('Only admins can export data');
                 return;
