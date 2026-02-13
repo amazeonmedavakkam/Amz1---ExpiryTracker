@@ -900,16 +900,36 @@
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}&t=${Date.now()}`);
                     const data = await response.json();
                     
+                    // Normalize IDs to strings to prevent type mismatch issues
+                    let normalizedData = data;
+                    if (Array.isArray(data) && data.length > 0) {
+                        normalizedData = data.map(item => ({
+                            ...item,
+                            id: String(item.id)
+                        }));
+                    }
+                    
                     // Cache in localStorage
-                    localStorage.setItem(key, JSON.stringify(data));
+                    localStorage.setItem(key, JSON.stringify(normalizedData));
                     localStorage.setItem(key + '_timestamp', Date.now().toString());
                     
-                    return data;
+                    return normalizedData;
                 } catch (error) {
                     console.error('Error fetching from Google Sheets:', error);
                     // Fallback to localStorage cache
                     const localData = localStorage.getItem(key);
-                    return localData ? JSON.parse(localData) : null;
+                    if (localData) {
+                        const parsedData = JSON.parse(localData);
+                        // Normalize IDs even from cache
+                        if (Array.isArray(parsedData) && parsedData.length > 0) {
+                            return parsedData.map(item => ({
+                                ...item,
+                                id: String(item.id)
+                            }));
+                        }
+                        return parsedData;
+                    }
+                    return null;
                 }
             },
             async set(key, value) {
@@ -1173,12 +1193,28 @@
             try {
                 const savedItems = await storage.get('expiry-items');
                 if (savedItems) {
-                    items = savedItems;
+                    // Normalize all IDs to strings to prevent type mismatch issues
+                    items = savedItems.map(item => ({
+                        ...item,
+                        id: String(item.id)
+                    }));
+                    
+                    console.log('=== Data Loaded ===');
+                    console.log('Total items loaded:', items.length);
+                    if (items.length > 0) {
+                        console.log('Sample item:', items[0]);
+                        console.log('Sample ID type:', typeof items[0].id);
+                        console.log('First 5 IDs:', items.slice(0, 5).map(i => ({ id: i.id, type: typeof i.id })));
+                    }
                 }
                 
                 const savedBrands = await storage.get('expiry-brands');
                 if (savedBrands) {
-                    brands = savedBrands;
+                    // Normalize brand IDs too
+                    brands = savedBrands.map(brand => ({
+                        ...brand,
+                        id: String(brand.id)
+                    }));
                 }
                 
                 updateAllViews();
@@ -1199,12 +1235,20 @@
                 // Silently refresh data in background
                 const savedItems = await storage.get('expiry-items');
                 if (savedItems) {
-                    items = savedItems;
+                    // Normalize all IDs to strings
+                    items = savedItems.map(item => ({
+                        ...item,
+                        id: String(item.id)
+                    }));
                 }
                 
                 const savedBrands = await storage.get('expiry-brands');
                 if (savedBrands) {
-                    brands = savedBrands;
+                    // Normalize brand IDs too
+                    brands = savedBrands.map(brand => ({
+                        ...brand,
+                        id: String(brand.id)
+                    }));
                 }
                 
                 updateAllViews();
@@ -1428,35 +1472,63 @@
                     return;
                 }
                 
-                console.log('moveToExpiryArea called with id:', id);
+                console.log('=== moveToExpiryArea Debug Info ===');
+                console.log('Searching for ID:', id, 'Type:', typeof id);
                 console.log('Total items in array:', items.length);
-                console.log('Available item IDs:', items.map(i => i.id));
+                console.log('All item IDs and their types:', items.map(i => ({ id: i.id, type: typeof i.id, status: i.status })));
                 
-                const item = items.find(i => i.id === id || i.id === String(id));
+                // Try multiple matching strategies
+                let item = items.find(i => i.id === id);
                 if (!item) {
-                    console.error('Item not found. ID searched:', id, 'Type:', typeof id);
-                    alert('Error: Item not found (ID: ' + id + '). The item may have been removed or the page needs to be refreshed.');
+                    console.log('Exact match failed, trying string comparison...');
+                    item = items.find(i => String(i.id) === String(id));
+                }
+                if (!item) {
+                    console.log('String match failed, trying number comparison...');
+                    item = items.find(i => Number(i.id) === Number(id));
+                }
+                if (!item) {
+                    console.log('Number match failed, trying loose equality...');
+                    item = items.find(i => i.id == id);
+                }
+                
+                if (!item) {
+                    console.error('=== ITEM NOT FOUND ===');
+                    console.error('ID searched:', id);
+                    console.error('Available IDs:', items.map(i => i.id).join(', '));
+                    
+                    // Show detailed error to user
+                    const upcomingItems = items.filter(i => i.status === 'upcoming');
+                    alert(`Error: Item not found!\n\nSearched ID: ${id}\nTotal items: ${items.length}\nUpcoming items: ${upcomingItems.length}\n\nThis usually means:\n1. The item was already moved\n2. Data is out of sync\n\nRefreshing data now...`);
                     await autoRefreshData();
                     return;
                 }
+                
+                console.log('Item found:', item);
                 
                 if (item.status !== 'upcoming') {
-                    alert(`This item is already in ${item.status} status. Refreshing data...`);
+                    alert(`This item is already in "${item.status}" status. Refreshing data...`);
                     await autoRefreshData();
                     return;
                 }
                 
+                // Update item
                 item.status = 'expiry-area';
                 item.movedBy = currentUser.name;
                 item.movedDate = new Date().toISOString();
                 
+                console.log('Item updated, saving...');
                 await saveData();
+                
+                console.log('Data saved, refreshing views...');
                 await autoRefreshData();
                 
                 alert('Item moved to expiry area successfully!');
             } catch (error) {
-                console.error('Error moving item:', error);
-                alert('Failed to move item. Error: ' + error.message);
+                console.error('=== ERROR in moveToExpiryArea ===');
+                console.error('Error:', error);
+                console.error('Stack:', error.stack);
+                alert('Failed to move item. Error: ' + error.message + '\n\nCheck console for details.');
             }
         }
 
