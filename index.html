@@ -829,16 +829,29 @@
                     <h3>Total Expiry Area Worth</h3>
                     <div class="value" id="total-expiry-worth">₹0</div>
                 </div>
+                <div class="stat-card">
+                    <h3>Total Overall Expiry Value</h3>
+                    <div class="value" id="total-overall-worth">₹0</div>
+                    <small style="color: var(--text-light); font-size: 0.75rem; display: block; margin-top: 0.5rem;">
+                        Upcoming + Expiry Area
+                    </small>
+                </div>
             </div>
 
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>Expiry Area Value Trend</h2>
+                    <h2>Expiry Area Value Trend (Historical)</h2>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('day')" id="trend-day-btn">Daily</button>
                         <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('week')" id="trend-week-btn">Weekly</button>
                         <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('month')" id="trend-month-btn">Monthly</button>
                     </div>
+                </div>
+                
+                <div style="background: #fef2f2; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #dc2626;">
+                    <p style="color: var(--text-light); font-size: 0.9rem; margin: 0;">
+                        <strong>📈 Cumulative Trend:</strong> Shows the <strong>TOTAL value</strong> in expiry area at each point in time (not just new additions). Use this to track if your expiry area value is increasing or decreasing over time and set reduction targets.
+                    </p>
                 </div>
                 
                 <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
@@ -866,12 +879,134 @@
                     </table>
                 </div>
             </div>
+
+            <div class="card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid var(--accent-light);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="color: var(--primary-dark);">📊 Overall Expiry Value Trend (Historical)</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeOverallTrendView('day')" id="overall-trend-day-btn">Daily</button>
+                        <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeOverallTrendView('week')" id="overall-trend-week-btn">Weekly</button>
+                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeOverallTrendView('month')" id="overall-trend-month-btn">Monthly</button>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981;">
+                    <p style="color: var(--text-light); font-size: 0.9rem; margin: 0;">
+                        <strong>📈 Cumulative Trend:</strong> Shows the <strong>TOTAL combined value</strong> of <span style="color: #f59e0b; font-weight: 600;">Upcoming Expiries</span> + <span style="color: #dc2626; font-weight: 600;">Expiry Area</span> at each point in time. Perfect for setting overall reduction targets and analyzing your complete expiry exposure trends.
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollOverallTrendData('prev')" id="overall-trend-prev-btn">← Previous</button>
+                    <span id="overall-trend-range-display" style="font-weight: 500; flex: 1; text-align: center;"></span>
+                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollOverallTrendData('next')" id="overall-trend-next-btn">Next →</button>
+                </div>
+                
+                <div id="overall-trend-chart" style="margin-top: 2rem;"></div>
+            </div>
+
+            <div class="card">
+                <h2>Overall Period Breakdown</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Upcoming Items</th>
+                                <th>Expiry Area Items</th>
+                                <th>Total Items</th>
+                                <th>Total Quantity</th>
+                                <th>Total Worth (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overall-period-breakdown"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Reports Tab -->
         <div id="reports-tab" class="tab-content">
+            <div class="card" style="background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%); border: 2px solid #fbbf24;">
+                <h2 style="color: #92400e;">📋 Period-Based Activity Report</h2>
+                
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div class="form-group">
+                            <label>From Date</label>
+                            <input type="date" id="report-date-from" onchange="updatePeriodReport()">
+                        </div>
+                        <div class="form-group">
+                            <label>To Date</label>
+                            <input type="date" id="report-date-to" onchange="updatePeriodReport()">
+                        </div>
+                        <div class="form-group">
+                            <label>Activity Type</label>
+                            <select id="report-activity-type" onchange="updatePeriodReport()">
+                                <option value="all">All Activities</option>
+                                <option value="moved">Moved to Expiry Area</option>
+                                <option value="returned">Returned to Company</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Brand Filter</label>
+                            <select id="report-brand-filter" onchange="updatePeriodReport()">
+                                <option value="all">All Brands</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Quick Periods</label>
+                            <select id="report-quick-period" onchange="applyQuickPeriod()">
+                                <option value="">Select Period...</option>
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="this-week">This Week</option>
+                                <option value="last-week">Last Week</option>
+                                <option value="this-month">This Month</option>
+                                <option value="last-month">Last Month</option>
+                                <option value="last-30-days">Last 30 Days</option>
+                                <option value="last-90-days">Last 90 Days</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong id="report-summary-text">Select a period to view report</strong>
+                    </div>
+                    <button class="btn btn-primary" onclick="exportPeriodReportToCSV()" id="export-period-report-btn" disabled>
+                        📥 Download CSV Report
+                    </button>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Activity</th>
+                                <th>Brand</th>
+                                <th>Item Name</th>
+                                <th>MRP</th>
+                                <th>Quantity</th>
+                                <th>Total Value</th>
+                                <th>Expiry Date</th>
+                                <th>Processed By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="period-report-items"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="card">
                 <h2>Brand-wise Expiry Report</h2>
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-primary" onclick="exportBrandReportToCSV()">
+                        📥 Download Brand Report CSV
+                    </button>
+                </div>
                 <div id="brand-report"></div>
             </div>
         </div>
@@ -987,6 +1122,10 @@
         // Trend view state
         let trendView = 'week'; // 'day', 'week', or 'month'
         let trendOffset = 0; // How many periods to scroll back
+        
+        // Overall trend view state (for the new overall expiry value trend)
+        let overallTrendView = 'week';
+        let overallTrendOffset = 0;
         
         // Check login status on page load
         setTimeout(function() {
@@ -1599,6 +1738,197 @@
             updateAnalyticsView();
         }
         
+        // Change overall trend view
+        function changeOverallTrendView(view) {
+            overallTrendView = view;
+            overallTrendOffset = 0; // Reset to current period
+            
+            // Update button styles
+            document.getElementById('overall-trend-day-btn').className = 'btn';
+            document.getElementById('overall-trend-week-btn').className = 'btn';
+            document.getElementById('overall-trend-month-btn').className = 'btn';
+            document.getElementById(`overall-trend-${view}-btn`).className = 'btn btn-primary';
+            
+            updateOverallTrendView();
+        }
+        
+        // Scroll overall trend data
+        function scrollOverallTrendData(direction) {
+            if (direction === 'prev') {
+                overallTrendOffset++;
+            } else if (direction === 'next' && overallTrendOffset > 0) {
+                overallTrendOffset--;
+            }
+            updateOverallTrendView();
+        }
+        
+        // Get date range for overall trend view
+        function getOverallDateRange() {
+            const today = new Date();
+            let startDate, endDate, periods;
+            
+            if (overallTrendView === 'day') {
+                // Show 7 days
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setDate(endDate.getDate() - (overallTrendOffset * periods));
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - (periods - 1));
+            } else if (overallTrendView === 'week') {
+                // Show 7 weeks
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setDate(endDate.getDate() - (overallTrendOffset * periods * 7));
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - ((periods - 1) * 7));
+            } else { // month
+                // Show 7 months
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setMonth(endDate.getMonth() - overallTrendOffset * periods);
+                startDate = new Date(endDate);
+                startDate.setMonth(startDate.getMonth() - (periods - 1));
+            }
+            
+            return { startDate, endDate, periods };
+        }
+        
+        // Update overall trend view
+        function updateOverallTrendView() {
+            // Get date range
+            const { startDate, endDate, periods } = getOverallDateRange();
+            const periodData = {};
+            
+            // Initialize all periods in range with zero values
+            const currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                const key = getPeriodKey(currentDate, overallTrendView);
+                if (!periodData[key]) {
+                    periodData[key] = {
+                        upcomingItems: [],
+                        expiryAreaItems: [],
+                        upcomingCount: 0,
+                        expiryAreaCount: 0,
+                        totalCount: 0,
+                        quantity: 0,
+                        worth: 0,
+                        date: new Date(currentDate)
+                    };
+                }
+                
+                // Move to next period
+                if (overallTrendView === 'day') {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                } else if (overallTrendView === 'week') {
+                    currentDate.setDate(currentDate.getDate() + 7);
+                } else {
+                    currentDate.setMonth(currentDate.getMonth() + 1);
+                }
+            }
+            
+            // For each period, calculate the STATE of items AT THAT TIME
+            Object.keys(periodData).forEach(key => {
+                const periodDate = periodData[key].date;
+                const periodEnd = new Date(periodDate);
+                
+                // Set period end based on view
+                if (overallTrendView === 'day') {
+                    periodEnd.setDate(periodEnd.getDate() + 1);
+                } else if (overallTrendView === 'week') {
+                    periodEnd.setDate(periodEnd.getDate() + 6);
+                } else {
+                    periodEnd.setMonth(periodEnd.getMonth() + 1);
+                    periodEnd.setDate(0); // Last day of month
+                }
+                
+                // Check each item to see what state it was in during this period
+                items.forEach(item => {
+                    const addedDate = item.addedDate ? new Date(item.addedDate) : null;
+                    const movedDate = item.movedDate ? new Date(item.movedDate) : null;
+                    const returnedDate = item.returnedDate ? new Date(item.returnedDate) : null;
+                    
+                    if (!addedDate || addedDate > periodEnd) return; // Not added yet
+                    if (returnedDate && returnedDate < periodDate) return; // Already returned before this period
+                    
+                    // Determine item state during this period
+                    let itemState = 'upcoming'; // Default state
+                    
+                    if (movedDate && movedDate <= periodEnd) {
+                        itemState = 'expiry-area'; // Was moved to expiry area
+                    }
+                    
+                    if (returnedDate && returnedDate <= periodEnd) {
+                        return; // Item was returned, don't count it
+                    }
+                    
+                    // Add item to appropriate category
+                    if (itemState === 'upcoming') {
+                        periodData[key].upcomingItems.push(item);
+                        periodData[key].upcomingCount++;
+                    } else {
+                        periodData[key].expiryAreaItems.push(item);
+                        periodData[key].expiryAreaCount++;
+                    }
+                    
+                    periodData[key].totalCount++;
+                    periodData[key].quantity += item.quantity;
+                    periodData[key].worth += item.mrp * item.quantity;
+                });
+            });
+            
+            // Update range display
+            const rangeDisplay = document.getElementById('overall-trend-range-display');
+            rangeDisplay.textContent = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            
+            // Create chart
+            const sortedKeys = Object.keys(periodData).sort();
+            const maxWorth = Math.max(...Object.values(periodData).map(p => p.worth), 1);
+            
+            const chartHTML = `
+                <div class="chart-wrapper">
+                    ${sortedKeys.map(key => {
+                        const data = periodData[key];
+                        const height = (data.worth / maxWorth) * 200;
+                        const label = formatPeriodLabel(data.date, overallTrendView);
+                        return `
+                            <div class="chart-bar" style="height: ${height}px; width: ${Math.max(40, 600/sortedKeys.length)}px; background: linear-gradient(to top, #10b981, #34d399);">
+                                <div class="chart-value" style="color: #059669;">₹${data.worth.toFixed(0)}</div>
+                                <div class="chart-label">${label}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            document.getElementById('overall-trend-chart').innerHTML = sortedKeys.length > 0 ? chartHTML : 
+                '<div class="empty-state">No data to display</div>';
+            
+            // Update breakdown table
+            const tbody = document.getElementById('overall-period-breakdown');
+            if (sortedKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div>No data for selected period</div></td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = sortedKeys.map(key => {
+                const data = periodData[key];
+                const label = formatPeriodLabel(data.date, overallTrendView);
+                return `
+                    <tr>
+                        <td>${label}</td>
+                        <td><span style="color: #f59e0b; font-weight: 600;">${data.upcomingCount}</span></td>
+                        <td><span style="color: #dc2626; font-weight: 600;">${data.expiryAreaCount}</span></td>
+                        <td><strong>${data.totalCount}</strong></td>
+                        <td>${data.quantity}</td>
+                        <td><strong style="color: #059669;">₹${data.worth.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Disable Next button if at current period
+            document.getElementById('overall-trend-next-btn').disabled = overallTrendOffset === 0;
+        }
+        
         // Get date range for current view
         function getDateRange() {
             const today = new Date();
@@ -1658,18 +1988,45 @@
         // Update analytics view
         function updateAnalyticsView() {
             const expiryAreaItems = items.filter(item => item.status === 'expiry-area');
+            const upcomingItems = items.filter(item => item.status === 'upcoming');
             
-            // Calculate total worth
+            // Calculate total worth for expiry area
             const totalWorth = expiryAreaItems.reduce((sum, item) => 
                 sum + (item.mrp * item.quantity), 0);
             
+            // Calculate total worth for upcoming items
+            const upcomingWorth = upcomingItems.reduce((sum, item) => 
+                sum + (item.mrp * item.quantity), 0);
+            
+            // Calculate overall expiry value (upcoming + expiry area)
+            const overallWorth = totalWorth + upcomingWorth;
+            
             document.getElementById('total-expiry-worth').textContent = `₹${totalWorth.toFixed(2)}`;
+            document.getElementById('total-overall-worth').textContent = `₹${overallWorth.toFixed(2)}`;
             
             // Get current week worth
             const currentWeekStart = getWeekStart(new Date());
-            const currentWeekKey = currentWeekStart.toISOString().split('T')[0];
+            const currentWeekEnd = new Date(currentWeekStart);
+            currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
             
-            // Group by selected period
+            // Calculate current week worth by checking what was in expiry area during this week
+            const currentWeekWorth = items.reduce((sum, item) => {
+                if (item.status !== 'expiry-area' && item.status !== 'returned') return sum;
+                
+                // Check if item was in expiry area during current week
+                const movedDate = item.movedDate ? new Date(item.movedDate) : null;
+                const returnedDate = item.returnedDate ? new Date(item.returnedDate) : null;
+                
+                if (!movedDate || movedDate > currentWeekEnd) return sum; // Not moved yet
+                if (returnedDate && returnedDate < currentWeekStart) return sum; // Already returned before this week
+                
+                // Item was in expiry area during at least part of this week
+                return sum + (item.mrp * item.quantity);
+            }, 0);
+            
+            document.getElementById('current-week-worth').textContent = `₹${currentWeekWorth.toFixed(2)}`;
+            
+            // Group by selected period - CUMULATIVE/STATE-BASED
             const { startDate, endDate, periods } = getDateRange();
             const periodData = {};
             
@@ -1697,26 +2054,42 @@
                 }
             }
             
-            // Populate with actual data
-            expiryAreaItems.forEach(item => {
-                if (!item.movedDate) return;
+            // For each period, calculate what items were in expiry area AT THAT TIME
+            Object.keys(periodData).forEach(key => {
+                const periodDate = periodData[key].date;
+                const periodEnd = new Date(periodDate);
                 
-                const movedDate = new Date(item.movedDate);
-                if (movedDate < startDate || movedDate > endDate) return;
-                
-                const key = getPeriodKey(movedDate, trendView);
-                
-                if (periodData[key]) {
-                    periodData[key].items.push(item);
-                    periodData[key].count++;
-                    periodData[key].quantity += item.quantity;
-                    periodData[key].worth += item.mrp * item.quantity;
+                // Set period end based on view
+                if (trendView === 'day') {
+                    periodEnd.setDate(periodEnd.getDate() + 1);
+                } else if (trendView === 'week') {
+                    periodEnd.setDate(periodEnd.getDate() + 6);
+                } else {
+                    periodEnd.setMonth(periodEnd.getMonth() + 1);
+                    periodEnd.setDate(0); // Last day of month
                 }
+                
+                // Find all items that were in expiry area during this period
+                items.forEach(item => {
+                    if (item.status !== 'expiry-area' && item.status !== 'returned') return;
+                    
+                    const movedDate = item.movedDate ? new Date(item.movedDate) : null;
+                    const returnedDate = item.returnedDate ? new Date(item.returnedDate) : null;
+                    
+                    if (!movedDate) return;
+                    
+                    // Check if item was in expiry area during this period
+                    const wasInExpiryArea = movedDate <= periodEnd && 
+                                           (!returnedDate || returnedDate >= periodDate);
+                    
+                    if (wasInExpiryArea) {
+                        periodData[key].items.push(item);
+                        periodData[key].count++;
+                        periodData[key].quantity += item.quantity;
+                        periodData[key].worth += item.mrp * item.quantity;
+                    }
+                });
             });
-            
-            // Calculate current week worth
-            const currentWeekWorth = periodData[currentWeekKey]?.worth || 0;
-            document.getElementById('current-week-worth').textContent = `₹${currentWeekWorth.toFixed(2)}`;
             
             // Update range display
             const rangeDisplay = document.getElementById('trend-range-display');
@@ -1767,6 +2140,9 @@
             
             // Disable Next button if at current period
             document.getElementById('trend-next-btn').disabled = trendOffset === 0;
+            
+            // Update overall trend view
+            updateOverallTrendView();
         }
         
         // Helper function to get week start (Monday)
@@ -1898,6 +2274,175 @@
             const a = document.createElement('a');
             a.href = url;
             a.download = `expiry-tracker-master-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // Export period report to CSV
+        function exportPeriodReportToCSV() {
+            const dateFrom = document.getElementById('report-date-from').value;
+            const dateTo = document.getElementById('report-date-to').value;
+            const activityType = document.getElementById('report-activity-type').value;
+            const brandFilter = document.getElementById('report-brand-filter').value;
+            
+            if (!dateFrom || !dateTo) {
+                alert('Please select both From and To dates');
+                return;
+            }
+            
+            const fromDate = new Date(dateFrom);
+            const toDate = new Date(dateTo);
+            toDate.setHours(23, 59, 59, 999);
+            
+            // Filter items based on activity in the period
+            let filteredItems = [];
+            
+            items.forEach(item => {
+                // Check if moved to expiry area in period
+                if ((activityType === 'all' || activityType === 'moved') && item.movedDate) {
+                    const movedDate = new Date(item.movedDate);
+                    if (movedDate >= fromDate && movedDate <= toDate) {
+                        filteredItems.push({
+                            ...item,
+                            activityDate: movedDate,
+                            activityType: 'Moved to Expiry Area',
+                            processedBy: item.movedBy
+                        });
+                    }
+                }
+                
+                // Check if returned in period
+                if ((activityType === 'all' || activityType === 'returned') && item.returnedDate) {
+                    const returnedDate = new Date(item.returnedDate);
+                    if (returnedDate >= fromDate && returnedDate <= toDate) {
+                        filteredItems.push({
+                            ...item,
+                            activityDate: returnedDate,
+                            activityType: 'Returned to Company',
+                            processedBy: item.returnedBy
+                        });
+                    }
+                }
+            });
+            
+            // Apply brand filter
+            if (brandFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.brand === brandFilter);
+            }
+            
+            // Sort by date (most recent first)
+            filteredItems.sort((a, b) => b.activityDate - a.activityDate);
+            
+            if (filteredItems.length === 0) {
+                alert('No data to export for the selected period');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Activity Date', 'Activity Type', 'Brand', 'Item Name', 'MRP', 'Quantity', 'Total Value', 'Expiry Date', 'Processed By', 'Added By', 'Added Date'];
+            const csvRows = [headers.join(',')];
+            
+            filteredItems.forEach(item => {
+                const row = [
+                    item.activityDate.toLocaleDateString(),
+                    `"${item.activityType}"`,
+                    `"${item.brand}"`,
+                    `"${item.itemName || ''}"`,
+                    item.mrp,
+                    item.quantity,
+                    (item.mrp * item.quantity).toFixed(2),
+                    item.expiryDate,
+                    `"${item.processedBy}"`,
+                    `"${item.addedBy}"`,
+                    item.addedDate ? new Date(item.addedDate).toLocaleDateString() : ''
+                ];
+                csvRows.push(row.join(','));
+            });
+            
+            // Add summary row
+            const totalValue = filteredItems.reduce((sum, item) => sum + (item.mrp * item.quantity), 0);
+            const movedCount = filteredItems.filter(i => i.activityType === 'Moved to Expiry Area').length;
+            const returnedCount = filteredItems.filter(i => i.activityType === 'Returned to Company').length;
+            
+            csvRows.push('');
+            csvRows.push(`SUMMARY`);
+            csvRows.push(`Period,"${dateFrom} to ${dateTo}"`);
+            csvRows.push(`Total Activities,${filteredItems.length}`);
+            csvRows.push(`Moved to Expiry Area,${movedCount}`);
+            csvRows.push(`Returned to Company,${returnedCount}`);
+            csvRows.push(`Total Value,₹${totalValue.toFixed(2)}`);
+            
+            // Download CSV
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `expiry-activity-report-${dateFrom}-to-${dateTo}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // Export brand report to CSV
+        function exportBrandReportToCSV() {
+            const expiryAreaItems = items.filter(item => item.status === 'expiry-area');
+            
+            if (expiryAreaItems.length === 0) {
+                alert('No items in expiry area to export');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Brand', 'Item Name', 'MRP', 'Quantity', 'Total Value', 'Expiry Date', 'Moved By', 'Moved Date'];
+            const csvRows = [headers.join(',')];
+            
+            // Group by brand
+            const brandGroups = {};
+            expiryAreaItems.forEach(item => {
+                if (!brandGroups[item.brand]) {
+                    brandGroups[item.brand] = [];
+                }
+                brandGroups[item.brand].push(item);
+            });
+            
+            // Add data for each brand
+            Object.entries(brandGroups).sort((a, b) => a[0].localeCompare(b[0])).forEach(([brand, brandItems]) => {
+                // Add brand header
+                csvRows.push('');
+                csvRows.push(`"=== ${brand} ==="`);
+                
+                // Add items for this brand
+                brandItems.forEach(item => {
+                    const row = [
+                        `"${item.brand}"`,
+                        `"${item.itemName || ''}"`,
+                        item.mrp,
+                        item.quantity,
+                        (item.mrp * item.quantity).toFixed(2),
+                        item.expiryDate,
+                        `"${item.movedBy}"`,
+                        item.movedDate ? new Date(item.movedDate).toLocaleDateString() : ''
+                    ];
+                    csvRows.push(row.join(','));
+                });
+                
+                // Add brand subtotal
+                const brandTotal = brandItems.reduce((sum, item) => sum + (item.mrp * item.quantity), 0);
+                csvRows.push(`"${brand} SUBTOTAL:",,,${brandItems.length},₹${brandTotal.toFixed(2)}`);
+            });
+            
+            // Add grand total
+            const grandTotal = expiryAreaItems.reduce((sum, item) => sum + (item.mrp * item.quantity), 0);
+            csvRows.push('');
+            csvRows.push(`"GRAND TOTAL:",,,${expiryAreaItems.length},₹${grandTotal.toFixed(2)}`);
+            
+            // Download CSV
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `brand-wise-expiry-report-${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
         }
@@ -2143,6 +2688,178 @@
                     </div>
                 </div>
             `).join('');
+            
+            // Update period report
+            updatePeriodReport();
+        }
+        
+        // Apply quick period selection
+        function applyQuickPeriod() {
+            const quickPeriod = document.getElementById('report-quick-period').value;
+            const today = new Date();
+            let fromDate, toDate;
+            
+            switch(quickPeriod) {
+                case 'today':
+                    fromDate = toDate = new Date(today);
+                    break;
+                case 'yesterday':
+                    fromDate = toDate = new Date(today);
+                    fromDate.setDate(fromDate.getDate() - 1);
+                    toDate.setDate(toDate.getDate() - 1);
+                    break;
+                case 'this-week':
+                    fromDate = getWeekStart(today);
+                    toDate = new Date(fromDate);
+                    toDate.setDate(toDate.getDate() + 6);
+                    break;
+                case 'last-week':
+                    toDate = getWeekStart(today);
+                    toDate.setDate(toDate.getDate() - 1);
+                    fromDate = getWeekStart(toDate);
+                    break;
+                case 'this-month':
+                    fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    break;
+                case 'last-month':
+                    fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                    break;
+                case 'last-30-days':
+                    fromDate = new Date(today);
+                    fromDate.setDate(fromDate.getDate() - 30);
+                    toDate = new Date(today);
+                    break;
+                case 'last-90-days':
+                    fromDate = new Date(today);
+                    fromDate.setDate(fromDate.getDate() - 90);
+                    toDate = new Date(today);
+                    break;
+                default:
+                    return;
+            }
+            
+            document.getElementById('report-date-from').value = fromDate.toISOString().split('T')[0];
+            document.getElementById('report-date-to').value = toDate.toISOString().split('T')[0];
+            updatePeriodReport();
+        }
+        
+        // Update period-based report
+        function updatePeriodReport() {
+            const tbody = document.getElementById('period-report-items');
+            const dateFrom = document.getElementById('report-date-from').value;
+            const dateTo = document.getElementById('report-date-to').value;
+            const activityType = document.getElementById('report-activity-type').value;
+            const brandFilter = document.getElementById('report-brand-filter').value;
+            
+            // Update brand filter dropdown
+            const brandFilterSelect = document.getElementById('report-brand-filter');
+            const currentBrandFilter = brandFilterSelect.value;
+            const uniqueBrands = [...new Set(items.map(item => item.brand))].sort();
+            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
+                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
+            brandFilterSelect.value = currentBrandFilter;
+            
+            if (!dateFrom || !dateTo) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div>Please select both From and To dates</div></td></tr>';
+                document.getElementById('export-period-report-btn').disabled = true;
+                return;
+            }
+            
+            const fromDate = new Date(dateFrom);
+            const toDate = new Date(dateTo);
+            toDate.setHours(23, 59, 59, 999); // Include full day
+            
+            // Filter items based on activity in the period
+            let filteredItems = [];
+            
+            items.forEach(item => {
+                // Check if moved to expiry area in period
+                if ((activityType === 'all' || activityType === 'moved') && item.movedDate) {
+                    const movedDate = new Date(item.movedDate);
+                    if (movedDate >= fromDate && movedDate <= toDate) {
+                        filteredItems.push({
+                            ...item,
+                            activityDate: movedDate,
+                            activityType: 'Moved to Expiry Area',
+                            processedBy: item.movedBy
+                        });
+                    }
+                }
+                
+                // Check if returned in period
+                if ((activityType === 'all' || activityType === 'returned') && item.returnedDate) {
+                    const returnedDate = new Date(item.returnedDate);
+                    if (returnedDate >= fromDate && returnedDate <= toDate) {
+                        // Avoid duplicates if both moved and returned in same period
+                        const alreadyAdded = filteredItems.some(fi => 
+                            fi.id === item.id && fi.activityType === 'Moved to Expiry Area'
+                        );
+                        if (!alreadyAdded) {
+                            filteredItems.push({
+                                ...item,
+                                activityDate: returnedDate,
+                                activityType: 'Returned to Company',
+                                processedBy: item.returnedBy
+                            });
+                        } else {
+                            // If item was also moved in this period, add return as separate entry
+                            filteredItems.push({
+                                ...item,
+                                activityDate: returnedDate,
+                                activityType: 'Returned to Company',
+                                processedBy: item.returnedBy
+                            });
+                        }
+                    }
+                }
+            });
+            
+            // Apply brand filter
+            if (brandFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.brand === brandFilter);
+            }
+            
+            // Sort by date (most recent first)
+            filteredItems.sort((a, b) => b.activityDate - a.activityDate);
+            
+            // Update summary
+            const totalItems = filteredItems.length;
+            const totalValue = filteredItems.reduce((sum, item) => sum + (item.mrp * item.quantity), 0);
+            const movedCount = filteredItems.filter(i => i.activityType === 'Moved to Expiry Area').length;
+            const returnedCount = filteredItems.filter(i => i.activityType === 'Returned to Company').length;
+            
+            document.getElementById('report-summary-text').innerHTML = `
+                <strong>${totalItems}</strong> activities found | 
+                <span style="color: #dc2626;">${movedCount} moved</span> | 
+                <span style="color: #059669;">${returnedCount} returned</span> | 
+                Total Value: <strong>₹${totalValue.toFixed(2)}</strong>
+            `;
+            
+            document.getElementById('export-period-report-btn').disabled = filteredItems.length === 0;
+            
+            if (filteredItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div>No activities found in selected period</div></td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filteredItems.map(item => {
+                const activityColor = item.activityType === 'Moved to Expiry Area' ? '#dc2626' : '#059669';
+                return `
+                    <tr>
+                        <td>${item.activityDate.toLocaleDateString()}</td>
+                        <td><span style="color: ${activityColor}; font-weight: 600;">${item.activityType}</span></td>
+                        <td>${item.brand}</td>
+                        <td>${item.itemName || '-'}</td>
+                        <td>₹${item.mrp}</td>
+                        <td>${item.quantity}</td>
+                        <td><strong>₹${(item.mrp * item.quantity).toFixed(2)}</strong></td>
+                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td>${item.processedBy}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         // Update stats
