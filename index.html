@@ -495,7 +495,7 @@
             <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">Amaze On Expiry Tracker</h2>
             <div class="form-group">
                 <label>Select Role</label>
-                <select id="login-role" style="width: 100%;">
+                <select id="login-role" style="width: 100%;" onchange="toggleAdminPassword()">
                     <option value="staff">Staff</option>
                     <option value="admin">Admin</option>
                 </select>
@@ -968,31 +968,8 @@
         let trendView = 'week'; // 'day', 'week', or 'month'
         let trendOffset = 0; // How many periods to scroll back
         
-        // Initialize login modal and role listener IMMEDIATELY (not waiting for DOMContentLoaded)
-        // This ensures the password field toggle works right away
+        // Check login status on page load
         setTimeout(function() {
-            const loginRole = document.getElementById('login-role');
-            const passwordField = document.getElementById('admin-password-field');
-            const errorMsg = document.getElementById('login-error');
-            
-            if (loginRole && passwordField) {
-                loginRole.addEventListener('change', function() {
-                    // Clear any previous errors
-                    if (errorMsg) {
-                        errorMsg.style.display = 'none';
-                        errorMsg.textContent = '';
-                    }
-                    
-                    // Show/hide password field
-                    if (this.value === 'admin') {
-                        passwordField.style.display = 'block';
-                    } else {
-                        passwordField.style.display = 'none';
-                    }
-                });
-            }
-            
-            // Check login status immediately
             checkLogin();
         }, 0);
         
@@ -1058,6 +1035,24 @@
             // Load initial data
             loadData();
         });
+        
+        // Toggle admin password field visibility
+        function toggleAdminPassword() {
+            const loginRole = document.getElementById('login-role');
+            const passwordField = document.getElementById('admin-password-field');
+            const errorMsg = document.getElementById('login-error');
+            
+            if (errorMsg) {
+                errorMsg.style.display = 'none';
+                errorMsg.textContent = '';
+            }
+            
+            if (loginRole.value === 'admin') {
+                passwordField.style.display = 'block';
+            } else {
+                passwordField.style.display = 'none';
+            }
+        }
         
         // Handle login
         function handleLogin() {
@@ -1426,9 +1421,21 @@
         // Move to expiry area (with error handling)
         async function moveToExpiryArea(id) {
             try {
-                const item = items.find(i => i.id === id);
+                // Ensure data is loaded
+                if (!items || items.length === 0) {
+                    alert('Loading data... Please wait and try again.');
+                    await loadData();
+                    return;
+                }
+                
+                console.log('moveToExpiryArea called with id:', id);
+                console.log('Total items in array:', items.length);
+                console.log('Available item IDs:', items.map(i => i.id));
+                
+                const item = items.find(i => i.id === id || i.id === String(id));
                 if (!item) {
-                    alert('Error: Item not found. Please refresh the page.');
+                    console.error('Item not found. ID searched:', id, 'Type:', typeof id);
+                    alert('Error: Item not found (ID: ' + id + '). The item may have been removed or the page needs to be refreshed.');
                     await autoRefreshData();
                     return;
                 }
@@ -1449,7 +1456,7 @@
                 alert('Item moved to expiry area successfully!');
             } catch (error) {
                 console.error('Error moving item:', error);
-                alert('Failed to move item. Please try again.');
+                alert('Failed to move item. Error: ' + error.message);
             }
         }
 
@@ -1505,7 +1512,7 @@
             document.getElementById('trend-day-btn').className = 'btn';
             document.getElementById('trend-week-btn').className = 'btn';
             document.getElementById('trend-month-btn').className = 'btn';
-            document.getElementById(`trend-${view}-btn').className = 'btn btn-primary';
+            document.getElementById(`trend-${view}-btn`).className = 'btn btn-primary';
             
             updateAnalyticsView();
         }
@@ -1915,6 +1922,7 @@
 
             tbody.innerHTML = filteredItems.map(item => {
                 const days = daysUntilExpiry(item.expiryDate);
+                const itemId = String(item.id); // Ensure ID is string
                 return `
                     <tr>
                         <td>${item.brand}</td>
@@ -1925,7 +1933,7 @@
                         <td><span class="badge badge-danger">${days} days</span></td>
                         <td>${item.addedBy}</td>
                         <td>
-                            <button class="btn btn-danger" onclick="moveToExpiryArea('${item.id}')">
+                            <button class="btn btn-danger" onclick="moveToExpiryArea('${itemId}')">
                                 Move to Expiry Area
                             </button>
                         </td>
