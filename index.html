@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!-- 
+    EXPIRY TRACKER - COMPLETE VERSION
+    Version: 2.0 (February 2026)
+    Features: All original tabs + Already Expired tab + Cross-device password sync
+    Tabs: Add Items, Brand Master, Master Data, Upcoming, Critical, Already Expired, Expiry Area, Analytics, Reports
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -570,6 +576,7 @@
             <button class="tab" onclick="switchTab('master-data')">Master Data</button>
             <button class="tab" onclick="switchTab('upcoming')">Upcoming Expiries</button>
             <button class="tab" onclick="switchTab('critical')">Critical (7 Days)</button>
+            <button class="tab" onclick="switchTab('already-expired')">Already Expired</button>
             <button class="tab" onclick="switchTab('expiry-area')">Expiry Area</button>
             <button class="tab" onclick="switchTab('analytics')">Analytics</button>
             <button class="tab" onclick="switchTab('reports')">Reports</button>
@@ -729,6 +736,10 @@
                     <h3>Needs Attention</h3>
                     <div class="value" id="critical-count">0</div>
                 </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                    <h3>Already Expired</h3>
+                    <div class="value" id="already-expired-count">0</div>
+                </div>
             </div>
 
             <div id="alerts-container"></div>
@@ -802,6 +813,61 @@
                             </tr>
                         </thead>
                         <tbody id="critical-items"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Already Expired Tab -->
+        <div id="already-expired-tab" class="tab-content">
+            <div class="card">
+                <h2>Already Expired Items</h2>
+                <p style="color: var(--danger); font-weight: 600; margin-bottom: 1.5rem;">
+                    ⚠️ These items have already passed their expiry date and require immediate attention!
+                </p>
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand</label>
+                        <select id="already-expired-brand-filter" onchange="updateAlreadyExpiredView()">
+                            <option value="all">All Brands</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Expiry Date From</label>
+                        <input type="date" id="already-expired-date-from" onchange="updateAlreadyExpiredView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Expiry Date To</label>
+                        <input type="date" id="already-expired-date-to" onchange="updateAlreadyExpiredView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Search Item</label>
+                        <input type="text" id="already-expired-search-filter" placeholder="Search by item name..." oninput="updateAlreadyExpiredView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Sort By</label>
+                        <select id="already-expired-sort-filter" onchange="updateAlreadyExpiredView()">
+                            <option value="expiry-asc">Expiry Date (Oldest First)</option>
+                            <option value="expiry-desc">Expiry Date (Most Recent First)</option>
+                            <option value="brand">Brand (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Item Name</th>
+                                <th>MRP</th>
+                                <th>Quantity</th>
+                                <th>Expiry Date</th>
+                                <th>Days Overdue</th>
+                                <th>Added By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="already-expired-items"></tbody>
                     </table>
                 </div>
             </div>
@@ -1862,6 +1928,7 @@
             updateMasterDataView();
             updateUpcomingView();
             updateCriticalView();
+            updateAlreadyExpiredView();
             updateExpiryAreaView();
             updateAnalyticsView();
             updateReportsView();
@@ -2715,6 +2782,88 @@
             }).join('');
         }
 
+        // Update already expired view
+        function updateAlreadyExpiredView() {
+            const tbody = document.getElementById('already-expired-items');
+            const brandFilter = document.getElementById('already-expired-brand-filter').value;
+            const searchFilter = document.getElementById('already-expired-search-filter').value.toLowerCase();
+            const sortFilter = document.getElementById('already-expired-sort-filter').value;
+            const dateFrom = document.getElementById('already-expired-date-from').value;
+            const dateTo = document.getElementById('already-expired-date-to').value;
+            
+            // Update brand filter dropdown
+            const brandFilterSelect = document.getElementById('already-expired-brand-filter');
+            const currentBrandFilter = brandFilterSelect.value;
+            const alreadyExpiredItems = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days < 0; // Already expired items
+            });
+            const uniqueBrands = [...new Set(alreadyExpiredItems.map(item => item.brand))].sort();
+            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
+                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
+            brandFilterSelect.value = currentBrandFilter;
+            
+            // Filter items
+            let filteredItems = alreadyExpiredItems;
+            
+            if (brandFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.brand === brandFilter);
+            }
+            
+            if (searchFilter) {
+                filteredItems = filteredItems.filter(item => 
+                    (item.itemName || '').toLowerCase().includes(searchFilter) ||
+                    item.brand.toLowerCase().includes(searchFilter)
+                );
+            }
+            
+            // Date range filter
+            if (dateFrom) {
+                filteredItems = filteredItems.filter(item => item.expiryDate >= dateFrom);
+            }
+            if (dateTo) {
+                filteredItems = filteredItems.filter(item => item.expiryDate <= dateTo);
+            }
+            
+            // Sort items
+            filteredItems.sort((a, b) => {
+                if (sortFilter === 'expiry-asc') {
+                    return new Date(a.expiryDate) - new Date(b.expiryDate);
+                } else if (sortFilter === 'expiry-desc') {
+                    return new Date(b.expiryDate) - new Date(a.expiryDate);
+                } else if (sortFilter === 'brand') {
+                    return a.brand.localeCompare(b.brand);
+                }
+            });
+
+            if (filteredItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div>No already expired items found</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredItems.map(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                const daysOverdue = Math.abs(days);
+                const itemId = String(item.id); // Ensure ID is string
+                return `
+                    <tr style="background-color: #fee;">
+                        <td>${item.brand}</td>
+                        <td>${item.itemName || '-'}</td>
+                        <td>₹${item.mrp}</td>
+                        <td>${item.quantity}</td>
+                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td><span class="badge badge-danger">${daysOverdue} days overdue</span></td>
+                        <td>${item.addedBy}</td>
+                        <td>
+                            <button class="btn btn-danger" onclick="moveToExpiryArea('${itemId}')">
+                                Move to Expiry Area
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
         // Update expiry area
         function updateExpiryAreaView() {
             const tbody = document.getElementById('expiry-area-items');
@@ -3027,11 +3176,17 @@
 
             const criticalCount = items.filter(item => {
                 const days = daysUntilExpiry(item.expiryDate);
-                return item.status === 'upcoming' && days <= 7;
+                return item.status === 'upcoming' && days <= 7 && days >= 0;
+            }).length;
+
+            const alreadyExpiredCount = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days < 0;
             }).length;
 
             document.getElementById('total-upcoming').textContent = upcomingCount;
             document.getElementById('critical-count').textContent = criticalCount;
+            document.getElementById('already-expired-count').textContent = alreadyExpiredCount;
         }
 
         // Update alerts
@@ -3039,19 +3194,33 @@
             const container = document.getElementById('alerts-container');
             const criticalItems = items.filter(item => {
                 const days = daysUntilExpiry(item.expiryDate);
-                return item.status === 'upcoming' && days <= 7;
+                return item.status === 'upcoming' && days <= 7 && days >= 0;
+            });
+            
+            const alreadyExpiredItems = items.filter(item => {
+                const days = daysUntilExpiry(item.expiryDate);
+                return item.status === 'upcoming' && days < 0;
             });
 
-            if (criticalItems.length === 0) {
-                container.innerHTML = '';
-                return;
+            let alertsHTML = '';
+            
+            if (alreadyExpiredItems.length > 0) {
+                alertsHTML += `
+                    <div class="alert alert-danger" style="background: linear-gradient(135deg, #dc2626, #ef4444); color: white;">
+                        <strong>🚨 URGENT:</strong> ${alreadyExpiredItems.length} item(s) have ALREADY EXPIRED and need immediate action!
+                    </div>
+                `;
             }
-
-            container.innerHTML = `
-                <div class="alert alert-danger">
-                    <strong>⚠️ Alert:</strong> ${criticalItems.length} item(s) need to be moved to expiry area within 7 days!
-                </div>
-            `;
+            
+            if (criticalItems.length > 0) {
+                alertsHTML += `
+                    <div class="alert alert-danger">
+                        <strong>⚠️ Alert:</strong> ${criticalItems.length} item(s) need to be moved to expiry area within 7 days!
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = alertsHTML;
         }
     </script>
 </body>
