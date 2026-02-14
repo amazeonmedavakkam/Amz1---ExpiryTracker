@@ -492,6 +492,64 @@
             background: linear-gradient(to bottom, transparent 0%, var(--bg-secondary) 100%);
             border-radius: 12px;
         }
+
+        /* Searchable Brand Input Autocomplete */
+        .brand-autocomplete {
+            position: relative;
+        }
+
+        .brand-autocomplete input {
+            width: 100%;
+        }
+
+        .brand-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid var(--primary);
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px var(--shadow-dark);
+        }
+
+        .brand-suggestions.show {
+            display: block;
+        }
+
+        .brand-suggestion-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand-suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .brand-suggestion-item:hover,
+        .brand-suggestion-item.selected {
+            background: var(--bg-secondary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .brand-suggestion-item.no-results {
+            color: var(--text-muted);
+            cursor: default;
+            font-style: italic;
+        }
+
+        .brand-suggestion-item.no-results:hover {
+            background: white;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
@@ -588,11 +646,10 @@
                 <h2>Add New Item</h2>
                 <form id="add-item-form">
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label>Brand Name *</label>
-                            <select id="brand" required>
-                                <option value="">Select a brand</option>
-                            </select>
+                        <div class="form-group brand-autocomplete">
+                            <label>Brand Name * <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                            <input type="text" id="brand" required placeholder="Type brand name..." autocomplete="off">
+                            <div id="brand-suggestions" class="brand-suggestions"></div>
                         </div>
                         <div class="form-group">
                             <label>Item Name *</label>
@@ -1127,17 +1184,19 @@
         // Admin password (stored in shared storage for cross-device persistence)
         async function getAdminPassword() {
             try {
-                const result = await window.storage.get('admin-password', true);
-                return result ? result.value : 'admin123';
+                // Get password from localStorage
+                const storedPassword = localStorage.getItem('admin-password');
+                return storedPassword || 'admin123'; // Default password
             } catch (error) {
-                // Key doesn't exist or error occurred, return default
+                console.error('Error getting password:', error);
                 return 'admin123';
             }
         }
         
         async function setAdminPassword(newPassword) {
             try {
-                await window.storage.set('admin-password', newPassword, true);
+                // Save password to localStorage
+                localStorage.setItem('admin-password', newPassword);
                 return true;
             } catch (error) {
                 console.error('Error saving password:', error);
@@ -1147,6 +1206,36 @@
         
         // Auto-refresh interval (in seconds)
         const AUTO_REFRESH_INTERVAL = 10; // Refresh data every 10 seconds
+        
+        // ===== PERFORMANCE UTILITIES =====
+        // Debounce function - prevents excessive calls
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Cached brand list (sorted alphabetically)
+        let cachedSortedBrands = [];
+        let brandCacheInvalid = true;
+        
+        function getSortedBrands() {
+            if (brandCacheInvalid) {
+                cachedSortedBrands = [...brands].sort((a, b) => a.name.localeCompare(b.name));
+                brandCacheInvalid = false;
+            }
+            return cachedSortedBrands;
+        }
+        
+        function invalidateBrandCache() {
+            brandCacheInvalid = true;
+        }
         
         // ===== GOOGLE SHEETS STORAGE (OPTIMIZED) =====
         let isSyncing = false;
@@ -1320,16 +1409,19 @@
                 };
                 
                 brands.push(brand);
+                invalidateBrandCache(); // Invalidate sorted cache
                 await saveData();
                 
                 this.reset();
                 alert('Brand added successfully!');
                 updateBrandsList();
-                updateBrandDropdown();
             });
             
             // Load initial data
             loadData();
+            
+            // Setup brand autocomplete (searchable brand input)
+            setupBrandAutocomplete();
         });
         
         // Toggle admin password field visibility
@@ -1415,7 +1507,7 @@
             const success = await setAdminPassword(newPassword);
             
             if (success) {
-                message.textContent = 'Password changed successfully! This change will sync across all devices.';
+                message.textContent = 'Password changed successfully!';
                 message.style.color = '#059669';
                 message.style.display = 'block';
             } else {
@@ -1679,31 +1771,106 @@
         }
 
         // Update brand dropdown
-        function updateBrandDropdown() {
-            const select = document.getElementById('brand');
-            const currentValue = select.value;
+        // Setup brand autocomplete (replaces dropdown)
+        function setupBrandAutocomplete() {
+            const brandInput = document.getElementById('brand');
+            const suggestionsDiv = document.getElementById('brand-suggestions');
             
-            select.innerHTML = '<option value="">Select a brand</option>' + 
-                brands.sort((a, b) => a.name.localeCompare(b.name))
-                    .map(brand => `<option value="${brand.name}">${brand.name}</option>`)
-                    .join('');
+            if (!brandInput || !suggestionsDiv) return;
             
-            if (currentValue) {
-                select.value = currentValue;
+            let selectedIndex = -1;
+            
+            // Filter and show suggestions
+            const showSuggestions = debounce(function() {
+                const searchTerm = brandInput.value.toLowerCase().trim();
+                
+                if (searchTerm.length === 0) {
+                    suggestionsDiv.classList.remove('show');
+                    return;
+                }
+                
+                const sortedBrands = getSortedBrands();
+                const matches = sortedBrands.filter(b => 
+                    b.name.toLowerCase().includes(searchTerm)
+                ).slice(0, 10); // Limit to 10 results for performance
+                
+                if (matches.length === 0) {
+                    suggestionsDiv.innerHTML = '<div class="brand-suggestion-item no-results">No matching brands. Add it in Brand Master!</div>';
+                    suggestionsDiv.classList.add('show');
+                    return;
+                }
+                
+                suggestionsDiv.innerHTML = matches.map((brand, index) => 
+                    `<div class="brand-suggestion-item" data-brand="${brand.name}" data-index="${index}">${brand.name}</div>`
+                ).join('');
+                suggestionsDiv.classList.add('show');
+                selectedIndex = -1;
+            }, 150); // 150ms debounce for smooth typing
+            
+            // Input event
+            brandInput.addEventListener('input', showSuggestions);
+            
+            // Keyboard navigation
+            brandInput.addEventListener('keydown', function(e) {
+                const items = suggestionsDiv.querySelectorAll('.brand-suggestion-item:not(.no-results)');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                    updateSelection(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
+                    updateSelection(items);
+                } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                    e.preventDefault();
+                    items[selectedIndex].click();
+                } else if (e.key === 'Escape') {
+                    suggestionsDiv.classList.remove('show');
+                }
+            });
+            
+            function updateSelection(items) {
+                items.forEach((item, index) => {
+                    if (index === selectedIndex) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
             }
+            
+            // Click event for suggestions
+            suggestionsDiv.addEventListener('click', function(e) {
+                if (e.target.classList.contains('brand-suggestion-item') && !e.target.classList.contains('no-results')) {
+                    brandInput.value = e.target.dataset.brand;
+                    suggestionsDiv.classList.remove('show');
+                }
+            });
+            
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!brandInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.classList.remove('show');
+                }
+            });
         }
 
-        // Update brands list
-        function updateBrandsList() {
+        // Update brands list (OPTIMIZED - limited rendering)
+        const updateBrandsList = debounce(function() {
             const tbody = document.getElementById('brands-list');
+            
+            if (!tbody) return;
             
             if (brands.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="2" class="empty-state"><div>No brands added yet. Add your first brand above!</div></td></tr>';
                 return;
             }
             
-            const sortedBrands = [...brands].sort((a, b) => a.name.localeCompare(b.name));
+            const sortedBrands = getSortedBrands();
             
+            // Render all brands (optimized with cached sorting)
             tbody.innerHTML = sortedBrands.map(brand => `
                 <tr>
                     <td><strong>${brand.name}</strong></td>
@@ -1712,7 +1879,7 @@
                     </td>
                 </tr>
             `).join('');
-        }
+        }, 100); // Debounce 100ms
 
         // Delete brand
         async function deleteBrand(id) {
@@ -1734,9 +1901,9 @@
             if (!confirm(`Delete brand "${brand.name}"?`)) return;
             
             brands = brands.filter(b => b.id !== id);
+            invalidateBrandCache(); // Invalidate sorted cache
             await saveData();
             updateBrandsList();
-            updateBrandDropdown();
         }
 
         // Reset item status (Admin only - for fixing stuck items)
