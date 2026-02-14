@@ -513,6 +513,37 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">⚙️ Settings</h2>
+            
+            <div id="admin-settings" style="display: none;">
+                <h3 style="color: var(--primary); margin-bottom: 1rem; font-size: 1.1rem;">Change Admin Password</h3>
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="current-admin-password" style="width: 100%;" placeholder="Enter current password">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>New Password</label>
+                    <input type="password" id="new-admin-password" style="width: 100%;" placeholder="Enter new password">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="confirm-admin-password" style="width: 100%;" placeholder="Confirm new password">
+                </div>
+                <button onclick="changeAdminPassword()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Change Password</button>
+                <p id="password-change-message" style="margin-top: 1rem; text-align: center; display: none;"></p>
+            </div>
+            
+            <div id="staff-settings">
+                <p style="text-align: center; color: var(--text-light);">Settings are available for admin users only.</p>
+            </div>
+            
+            <button onclick="closeSettings()" class="btn" style="width: 100%; margin-top: 1.5rem; background: #6b7280; color: white;">Close</button>
+        </div>
+    </div>
+
     <div class="header">
         <div class="header-content">
             <img src="Logo_HD.jpg" alt="Amaze On Logo" class="header-logo" id="header-logo">
@@ -524,7 +555,10 @@
                     <span id="user-info"></span>
                     <span id="sync-status" style="margin-left: 1rem; font-size: 0.8rem; opacity: 0.8;"></span>
                 </div>
-                <button onclick="handleLogout()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button onclick="openSettings()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" id="settings-btn">⚙️ Settings</button>
+                    <button onclick="handleLogout()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+                </div>
             </div>
         </div>
     </div>
@@ -572,6 +606,13 @@
                         <div class="form-group">
                             <label>Staff Name *</label>
                             <input type="text" id="staff-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Added Date (Optional)</label>
+                            <input type="date" id="added-date-override" placeholder="Leave empty for today">
+                            <small style="color: var(--text-light); font-size: 0.8rem; display: block; margin-top: 0.25rem;">
+                                For backdating old items. Defaults to today if empty.
+                            </small>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Add Item</button>
@@ -1017,8 +1058,14 @@
         // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoIX7pIS5_HqdB6ExpxQj4toGpu0_dKcAwyzdAKcgmBH8YNbfGsmDdJR_FpmAwiDwU/exec';
         
-        // Admin password (change this to your desired password)
-        const ADMIN_PASSWORD = "admin123";
+        // Admin password (stored in localStorage for persistence)
+        function getAdminPassword() {
+            return localStorage.getItem('adminPassword') || 'admin123';
+        }
+        
+        function setAdminPassword(newPassword) {
+            localStorage.setItem('adminPassword', newPassword);
+        }
         
         // Auto-refresh interval (in seconds)
         const AUTO_REFRESH_INTERVAL = 10; // Refresh data every 10 seconds
@@ -1138,6 +1185,12 @@
             document.getElementById('add-item-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
+                // Get backdating value if provided
+                const addedDateOverride = document.getElementById('added-date-override').value;
+                const addedDate = addedDateOverride ? 
+                    new Date(addedDateOverride).toISOString() : 
+                    new Date().toISOString();
+                
                 const item = {
                     id: Date.now().toString(),
                     brand: document.getElementById('brand').value,
@@ -1146,7 +1199,7 @@
                     quantity: parseInt(document.getElementById('quantity').value),
                     expiryDate: document.getElementById('expiry-date').value,
                     addedBy: document.getElementById('staff-name').value,
-                    addedDate: new Date().toISOString(),
+                    addedDate: addedDate,
                     status: 'upcoming',
                     movedBy: null,
                     movedDate: null,
@@ -1154,14 +1207,20 @@
                     returnedDate: null
                 };
                 
+                // OPTIMISTIC UPDATE: Add to UI immediately
                 items.push(item);
-                await saveData();
+                updateAllViews();
                 
                 this.reset();
                 // Pre-fill staff name again after reset
                 document.getElementById('staff-name').value = currentUser.name;
                 alert('Item added successfully!');
-                updateAllViews();
+                
+                // Save to server in background (non-blocking)
+                saveData().catch(error => {
+                    console.error('Background save failed:', error);
+                    // Item already in UI, so user isn't blocked
+                });
             });
 
             // Add brand form handler
@@ -1213,6 +1272,79 @@
             }
         }
         
+        // Open settings modal
+        function openSettings() {
+            const modal = document.getElementById('settings-modal');
+            const adminSettings = document.getElementById('admin-settings');
+            const staffSettings = document.getElementById('staff-settings');
+            
+            if (currentUser.role === 'admin') {
+                adminSettings.style.display = 'block';
+                staffSettings.style.display = 'none';
+            } else {
+                adminSettings.style.display = 'none';
+                staffSettings.style.display = 'block';
+            }
+            
+            // Clear form
+            document.getElementById('current-admin-password').value = '';
+            document.getElementById('new-admin-password').value = '';
+            document.getElementById('confirm-admin-password').value = '';
+            const message = document.getElementById('password-change-message');
+            message.style.display = 'none';
+            message.textContent = '';
+            
+            modal.style.display = 'flex';
+        }
+        
+        // Close settings modal
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+        
+        // Change admin password
+        function changeAdminPassword() {
+            const currentPassword = document.getElementById('current-admin-password').value;
+            const newPassword = document.getElementById('new-admin-password').value;
+            const confirmPassword = document.getElementById('confirm-admin-password').value;
+            const message = document.getElementById('password-change-message');
+            
+            // Validate current password
+            if (currentPassword !== getAdminPassword()) {
+                message.textContent = 'Current password is incorrect';
+                message.style.color = '#dc2626';
+                message.style.display = 'block';
+                return;
+            }
+            
+            // Validate new password
+            if (!newPassword || newPassword.length < 4) {
+                message.textContent = 'New password must be at least 4 characters';
+                message.style.color = '#dc2626';
+                message.style.display = 'block';
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                message.textContent = 'New passwords do not match';
+                message.style.color = '#dc2626';
+                message.style.display = 'block';
+                return;
+            }
+            
+            // Save new password
+            setAdminPassword(newPassword);
+            
+            message.textContent = 'Password changed successfully!';
+            message.style.color = '#059669';
+            message.style.display = 'block';
+            
+            // Clear form after 2 seconds
+            setTimeout(() => {
+                closeSettings();
+            }, 2000);
+        }
+        
         // Handle login
         function handleLogin() {
             const role = document.getElementById('login-role').value;
@@ -1232,7 +1364,7 @@
             }
             
             // Validate admin password
-            if (role === 'admin' && password !== ADMIN_PASSWORD) {
+            if (role === 'admin' && password !== getAdminPassword()) {
                 errorMsg.textContent = 'Incorrect admin password';
                 errorMsg.style.display = 'block';
                 return;
@@ -1611,39 +1743,18 @@
                     return;
                 }
                 
-                console.log('=== moveToExpiryArea Debug Info ===');
-                console.log('Searching for ID:', id, 'Type:', typeof id);
-                console.log('Total items in array:', items.length);
-                console.log('All item IDs and their types:', items.map(i => ({ id: i.id, type: typeof i.id, status: i.status })));
-                
                 // Try multiple matching strategies
                 let item = items.find(i => i.id === id);
-                if (!item) {
-                    console.log('Exact match failed, trying string comparison...');
-                    item = items.find(i => String(i.id) === String(id));
-                }
-                if (!item) {
-                    console.log('String match failed, trying number comparison...');
-                    item = items.find(i => Number(i.id) === Number(id));
-                }
-                if (!item) {
-                    console.log('Number match failed, trying loose equality...');
-                    item = items.find(i => i.id == id);
-                }
+                if (!item) item = items.find(i => String(i.id) === String(id));
+                if (!item) item = items.find(i => Number(i.id) === Number(id));
+                if (!item) item = items.find(i => i.id == id);
                 
                 if (!item) {
-                    console.error('=== ITEM NOT FOUND ===');
-                    console.error('ID searched:', id);
-                    console.error('Available IDs:', items.map(i => i.id).join(', '));
-                    
-                    // Show detailed error to user
                     const upcomingItems = items.filter(i => i.status === 'upcoming');
-                    alert(`Error: Item not found!\n\nSearched ID: ${id}\nTotal items: ${items.length}\nUpcoming items: ${upcomingItems.length}\n\nThis usually means:\n1. The item was already moved\n2. Data is out of sync\n\nRefreshing data now...`);
+                    alert(`Error: Item not found!\n\nSearched ID: ${id}\nTotal items: ${items.length}\nUpcoming items: ${upcomingItems.length}\n\nRefreshing data...`);
                     await autoRefreshData();
                     return;
                 }
-                
-                console.log('Item found:', item);
                 
                 if (item.status !== 'upcoming') {
                     alert(`This item is already in "${item.status}" status. Refreshing data...`);
@@ -1651,32 +1762,40 @@
                     return;
                 }
                 
-                // Update item
+                // PROMPT FOR NAME (with current user as default)
+                const personName = prompt(`Who is moving this item to expiry area?\n\nItem: ${item.brand} - ${item.itemName || ''}`, currentUser.name);
+                
+                if (!personName || personName.trim() === '') {
+                    alert('Action cancelled - name is required');
+                    return;
+                }
+                
+                // OPTIMISTIC UPDATE: Update UI immediately
                 item.status = 'expiry-area';
-                item.movedBy = currentUser.name;
+                item.movedBy = personName.trim();
                 item.movedDate = new Date().toISOString();
                 
-                console.log('Item updated, saving...');
-                await saveData();
-                
-                console.log('Data saved, refreshing views...');
-                await autoRefreshData();
-                
+                updateAllViews();
                 alert('Item moved to expiry area successfully!');
+                
+                // Save to server in background (non-blocking)
+                saveData().catch(error => {
+                    console.error('Background save failed:', error);
+                    alert('Warning: Item moved in app but may not be saved to server. Please check connection.');
+                });
+                
             } catch (error) {
-                console.error('=== ERROR in moveToExpiryArea ===');
-                console.error('Error:', error);
-                console.error('Stack:', error.stack);
-                alert('Failed to move item. Error: ' + error.message + '\n\nCheck console for details.');
+                console.error('ERROR in moveToExpiryArea:', error);
+                alert('Failed to move item. Error: ' + error.message);
             }
         }
 
         // Mark as returned (with error handling)
         async function markReturned(id) {
             try {
-                const item = items.find(i => i.id === id);
+                const item = items.find(i => i.id === id || String(i.id) === String(id));
                 if (!item) {
-                    alert('Error: Item not found. Please refresh the page.');
+                    alert('Error: Item not found. Refreshing...');
                     await autoRefreshData();
                     return;
                 }
@@ -1687,17 +1806,31 @@
                     return;
                 }
                 
+                // PROMPT FOR NAME (with current user as default)
+                const personName = prompt(`Who is marking this item as returned?\n\nItem: ${item.brand} - ${item.itemName || ''}`, currentUser.name);
+                
+                if (!personName || personName.trim() === '') {
+                    alert('Action cancelled - name is required');
+                    return;
+                }
+                
+                // OPTIMISTIC UPDATE: Update UI immediately
                 item.status = 'returned';
-                item.returnedBy = currentUser.name;
+                item.returnedBy = personName.trim();
                 item.returnedDate = new Date().toISOString();
                 
-                await saveData();
-                await autoRefreshData();
-                
+                updateAllViews();
                 alert('Item marked as returned successfully!');
+                
+                // Save to server in background (non-blocking)
+                saveData().catch(error => {
+                    console.error('Background save failed:', error);
+                    alert('Warning: Item marked in app but may not be saved to server. Please check connection.');
+                });
+                
             } catch (error) {
                 console.error('Error marking returned:', error);
-                alert('Failed to mark as returned. Please try again.');
+                alert('Failed to mark as returned. Error: ' + error.message);
             }
         }
 
