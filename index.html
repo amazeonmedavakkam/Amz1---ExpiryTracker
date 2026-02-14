@@ -1058,13 +1058,25 @@
         // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoIX7pIS5_HqdB6ExpxQj4toGpu0_dKcAwyzdAKcgmBH8YNbfGsmDdJR_FpmAwiDwU/exec';
         
-        // Admin password (stored in localStorage for persistence)
-        function getAdminPassword() {
-            return localStorage.getItem('adminPassword') || 'admin123';
+        // Admin password (stored in shared storage for cross-device persistence)
+        async function getAdminPassword() {
+            try {
+                const result = await window.storage.get('admin-password', true);
+                return result ? result.value : 'admin123';
+            } catch (error) {
+                // Key doesn't exist or error occurred, return default
+                return 'admin123';
+            }
         }
         
-        function setAdminPassword(newPassword) {
-            localStorage.setItem('adminPassword', newPassword);
+        async function setAdminPassword(newPassword) {
+            try {
+                await window.storage.set('admin-password', newPassword, true);
+                return true;
+            } catch (error) {
+                console.error('Error saving password:', error);
+                return false;
+            }
         }
         
         // Auto-refresh interval (in seconds)
@@ -1303,14 +1315,15 @@
         }
         
         // Change admin password
-        function changeAdminPassword() {
+        async function changeAdminPassword() {
             const currentPassword = document.getElementById('current-admin-password').value;
             const newPassword = document.getElementById('new-admin-password').value;
             const confirmPassword = document.getElementById('confirm-admin-password').value;
             const message = document.getElementById('password-change-message');
             
             // Validate current password
-            if (currentPassword !== getAdminPassword()) {
+            const storedPassword = await getAdminPassword();
+            if (currentPassword !== storedPassword) {
                 message.textContent = 'Current password is incorrect';
                 message.style.color = '#dc2626';
                 message.style.display = 'block';
@@ -1333,11 +1346,18 @@
             }
             
             // Save new password
-            setAdminPassword(newPassword);
+            const success = await setAdminPassword(newPassword);
             
-            message.textContent = 'Password changed successfully!';
-            message.style.color = '#059669';
-            message.style.display = 'block';
+            if (success) {
+                message.textContent = 'Password changed successfully! This change will sync across all devices.';
+                message.style.color = '#059669';
+                message.style.display = 'block';
+            } else {
+                message.textContent = 'Error saving password. Please try again.';
+                message.style.color = '#dc2626';
+                message.style.display = 'block';
+                return;
+            }
             
             // Clear form after 2 seconds
             setTimeout(() => {
@@ -1346,7 +1366,7 @@
         }
         
         // Handle login
-        function handleLogin() {
+        async function handleLogin() {
             const role = document.getElementById('login-role').value;
             const name = document.getElementById('login-name').value.trim();
             const password = document.getElementById('admin-password').value;
@@ -1364,10 +1384,13 @@
             }
             
             // Validate admin password
-            if (role === 'admin' && password !== getAdminPassword()) {
-                errorMsg.textContent = 'Incorrect admin password';
-                errorMsg.style.display = 'block';
-                return;
+            if (role === 'admin') {
+                const storedPassword = await getAdminPassword();
+                if (password !== storedPassword) {
+                    errorMsg.textContent = 'Incorrect admin password';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
             }
             
             // Create user session
@@ -3004,7 +3027,7 @@
 
             const criticalCount = items.filter(item => {
                 const days = daysUntilExpiry(item.expiryDate);
-                return item.status === 'upcoming' && days <= 7 && days >= 0;
+                return item.status === 'upcoming' && days <= 7;
             }).length;
 
             document.getElementById('total-upcoming').textContent = upcomingCount;
@@ -3016,7 +3039,7 @@
             const container = document.getElementById('alerts-container');
             const criticalItems = items.filter(item => {
                 const days = daysUntilExpiry(item.expiryDate);
-                return item.status === 'upcoming' && days <= 7 && days >= 0;
+                return item.status === 'upcoming' && days <= 7;
             });
 
             if (criticalItems.length === 0) {
