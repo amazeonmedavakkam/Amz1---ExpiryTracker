@@ -1396,31 +1396,68 @@
             });
 
             // Add brand form handler
-            document.getElementById('add-brand-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const brandName = document.getElementById('new-brand-name').value.trim();
-                
-                // Check for duplicates
-                if (brands.find(b => b.name.toLowerCase() === brandName.toLowerCase())) {
-                    alert('This brand already exists!');
-                    return;
-                }
-                
-                const brand = {
-                    id: Date.now().toString(),
-                    name: brandName,
-                    createdDate: new Date().toISOString()
-                };
-                
-                brands.push(brand);
-                invalidateBrandCache(); // Invalidate sorted cache
-                await saveData();
-                
-                this.reset();
-                alert('Brand added successfully!');
-                updateBrandsList();
-            });
+            // Add brand form handler (with duplicate prevention)
+            const addBrandForm = document.getElementById('add-brand-form');
+            let isAddingBrand = false; // Prevent duplicate submissions
+            
+            if (addBrandForm) {
+                addBrandForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    // Prevent duplicate submissions
+                    if (isAddingBrand) {
+                        console.log('Brand addition already in progress...');
+                        return;
+                    }
+                    
+                    isAddingBrand = true;
+                    
+                    try {
+                        const brandName = document.getElementById('new-brand-name').value.trim();
+                        
+                        if (!brandName) {
+                            alert('Please enter a brand name');
+                            return;
+                        }
+                        
+                        // Check for duplicates
+                        if (brands.find(b => b.name.toLowerCase() === brandName.toLowerCase())) {
+                            alert('This brand already exists!');
+                            return;
+                        }
+                        
+                        const brand = {
+                            id: Date.now().toString(),
+                            name: brandName,
+                            createdDate: new Date().toISOString()
+                        };
+                        
+                        console.log('Adding brand:', brandName);
+                        
+                        // Add to array
+                        brands.push(brand);
+                        invalidateBrandCache();
+                        
+                        // Save immediately and WAIT for completion
+                        console.log('Saving brands... Total:', brands.length);
+                        await saveData();
+                        console.log('Brand saved successfully');
+                        
+                        // Update UI
+                        this.reset();
+                        updateBrandsList();
+                        
+                        // Show success message
+                        alert('Brand added successfully!');
+                        
+                    } catch (error) {
+                        console.error('Error adding brand:', error);
+                        alert('Error adding brand. Please try again.');
+                    } finally {
+                        isAddingBrand = false;
+                    }
+                }, { once: false }); // Allow multiple submits, but use flag to prevent duplicates
+            }
             
             // Load initial data
             loadData();
@@ -1690,32 +1727,47 @@
         // Auto-refresh data from server
         async function autoRefreshData() {
             if (!currentUser.loggedIn) return;
+            if (isSyncing) return; // Don't refresh while saving!
             
             try {
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '🔄 Syncing...';
                 
+                // Get current local IDs before refresh
+                const localBrandIds = brands.map(b => b.id);
+                const localItemIds = items.map(i => i.id);
+                
                 // Silently refresh data in background
                 const savedItems = await storage.get('expiry-items');
                 if (savedItems) {
-                    // Normalize all IDs to strings
-                    items = savedItems.map(item => ({
+                    // MERGE instead of REPLACE - keep local changes
+                    const newItems = savedItems.map(item => ({
                         ...item,
                         id: String(item.id)
                     }));
+                    
+                    // Only update if there are actual changes
+                    if (JSON.stringify(newItems.map(i => i.id).sort()) !== JSON.stringify(localItemIds.sort())) {
+                        items = newItems;
+                    }
                 }
                 
                 const savedBrands = await storage.get('expiry-brands');
                 if (savedBrands) {
-                    // Normalize brand IDs too
-                    brands = savedBrands.map(brand => ({
+                    // MERGE instead of REPLACE - keep local changes
+                    const newBrands = savedBrands.map(brand => ({
                         ...brand,
                         id: String(brand.id)
                     }));
+                    
+                    // Only update if there are actual changes
+                    if (JSON.stringify(newBrands.map(b => b.id).sort()) !== JSON.stringify(localBrandIds.sort())) {
+                        brands = newBrands;
+                        invalidateBrandCache();
+                    }
                 }
                 
                 updateAllViews();
-                updateBrandDropdown();
                 
                 if (syncStatus) {
                     syncStatus.textContent = '✓ Synced';
