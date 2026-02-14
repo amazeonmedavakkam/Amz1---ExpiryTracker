@@ -742,11 +742,10 @@
                             <option value="returned">Returned</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand</label>
-                        <select id="brand-filter" onchange="updateMasterDataView()">
-                            <option value="all">All Brands</option>
-                        </select>
+                    <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <input type="text" id="brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
+                        <div id="brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
                         <label>Search Item</label>
@@ -828,11 +827,10 @@
             <div class="card">
                 <h2>Critical Items (7 Days or Less)</h2>
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand</label>
-                        <select id="critical-brand-filter" onchange="updateCriticalView()">
-                            <option value="all">All Brands</option>
-                        </select>
+                    <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <input type="text" id="critical-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
+                        <div id="critical-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
                         <label>Expiry Date From</label>
@@ -884,10 +882,9 @@
                 </p>
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand</label>
-                        <select id="already-expired-brand-filter" onchange="updateAlreadyExpiredView()">
-                            <option value="all">All Brands</option>
-                        </select>
+                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <input type="text" id="already-expired-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
+                        <div id="already-expired-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
                         <label>Expiry Date From</label>
@@ -937,9 +934,8 @@
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1; min-width: 200px;">
                         <label>Filter by Brand</label>
-                        <select id="expiry-area-brand-filter" onchange="updateExpiryAreaView()">
-                            <option value="all">All Brands</option>
-                        </select>
+                        <input type="text" id="expiry-area-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
+                        <div id="expiry-area-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
                         <label>Moved Date From</label>
@@ -1352,6 +1348,15 @@
             document.getElementById('add-item-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
+                // Validate brand exists
+                const brandInput = document.getElementById('brand').value.trim();
+                const brandExists = brands.some(b => b.name === brandInput);
+                
+                if (!brandExists) {
+                    alert(`Brand "${brandInput}" does not exist. Please select from the list or add it in Brand Master first.`);
+                    return;
+                }
+                
                 // Get backdating value if provided
                 const addedDateOverride = document.getElementById('added-date-override').value;
                 const addedDate = addedDateOverride ? 
@@ -1360,7 +1365,7 @@
                 
                 const item = {
                     id: Date.now().toString(),
-                    brand: document.getElementById('brand').value,
+                    brand: brandInput,
                     itemName: document.getElementById('item-name').value,
                     mrp: parseFloat(document.getElementById('mrp').value),
                     quantity: parseInt(document.getElementById('quantity').value),
@@ -1422,6 +1427,12 @@
             
             // Setup brand autocomplete (searchable brand input)
             setupBrandAutocomplete();
+            
+            // Setup filter autocompletes for all tabs
+            setupFilterAutocomplete('brand-filter', 'brand-filter-suggestions', updateMasterDataView);
+            setupFilterAutocomplete('critical-brand-filter', 'critical-brand-filter-suggestions', updateCriticalView);
+            setupFilterAutocomplete('already-expired-brand-filter', 'already-expired-brand-filter-suggestions', updateAlreadyExpiredView);
+            setupFilterAutocomplete('expiry-area-brand-filter', 'expiry-area-brand-filter-suggestions', updateExpiryAreaView);
         });
         
         // Toggle admin password field visibility
@@ -1667,10 +1678,10 @@
                         ...brand,
                         id: String(brand.id)
                     }));
+                    invalidateBrandCache(); // Invalidate cache when brands are loaded
                 }
                 
                 updateAllViews();
-                updateBrandDropdown();
             } catch (error) {
                 console.error('Error loading data:', error);
             }
@@ -1855,6 +1866,108 @@
                     suggestionsDiv.classList.remove('show');
                 }
             });
+        }
+
+        // Setup brand autocomplete for filters (generic function for all filter inputs)
+        function setupFilterAutocomplete(inputId, suggestionsId, updateCallback) {
+            const filterInput = document.getElementById(inputId);
+            const suggestionsDiv = document.getElementById(suggestionsId);
+            
+            if (!filterInput || !suggestionsDiv) return;
+            
+            let selectedIndex = -1;
+            let currentBrandFilter = ''; // Store current filter value
+            
+            // Filter and show suggestions
+            const showSuggestions = debounce(function() {
+                const searchTerm = filterInput.value.toLowerCase().trim();
+                
+                if (searchTerm.length === 0) {
+                    suggestionsDiv.classList.remove('show');
+                    currentBrandFilter = ''; // Reset to all brands
+                    if (updateCallback) updateCallback();
+                    return;
+                }
+                
+                const sortedBrands = getSortedBrands();
+                const matches = sortedBrands.filter(b => 
+                    b.name.toLowerCase().includes(searchTerm)
+                ).slice(0, 10);
+                
+                if (matches.length === 0) {
+                    suggestionsDiv.innerHTML = '<div class="brand-suggestion-item no-results">No matching brands</div>';
+                    suggestionsDiv.classList.add('show');
+                    return;
+                }
+                
+                suggestionsDiv.innerHTML = matches.map((brand, index) => 
+                    `<div class="brand-suggestion-item" data-brand="${brand.name}" data-index="${index}">${brand.name}</div>`
+                ).join('');
+                suggestionsDiv.classList.add('show');
+                selectedIndex = -1;
+            }, 150);
+            
+            // Input event
+            filterInput.addEventListener('input', function() {
+                showSuggestions();
+                // Don't call update callback yet, wait for selection
+            });
+            
+            // Keyboard navigation
+            filterInput.addEventListener('keydown', function(e) {
+                const items = suggestionsDiv.querySelectorAll('.brand-suggestion-item:not(.no-results)');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                    updateSelection(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
+                    updateSelection(items);
+                } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                    e.preventDefault();
+                    items[selectedIndex].click();
+                } else if (e.key === 'Escape') {
+                    suggestionsDiv.classList.remove('show');
+                    filterInput.value = '';
+                    currentBrandFilter = '';
+                    if (updateCallback) updateCallback();
+                }
+            });
+            
+            function updateSelection(items) {
+                items.forEach((item, index) => {
+                    if (index === selectedIndex) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+            
+            // Click event for suggestions
+            suggestionsDiv.addEventListener('click', function(e) {
+                if (e.target.classList.contains('brand-suggestion-item') && !e.target.classList.contains('no-results')) {
+                    filterInput.value = e.target.dataset.brand;
+                    currentBrandFilter = e.target.dataset.brand;
+                    suggestionsDiv.classList.remove('show');
+                    if (updateCallback) updateCallback();
+                }
+            });
+            
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!filterInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.classList.remove('show');
+                }
+            });
+            
+            // Helper to get current filter value (used by update functions)
+            filterInput.getFilterValue = function() {
+                return currentBrandFilter || filterInput.value.trim();
+            };
         }
 
         // Update brands list (OPTIMIZED - limited rendering)
@@ -2547,16 +2660,9 @@
         function updateMasterDataView() {
             const tbody = document.getElementById('master-data-items');
             const statusFilter = document.getElementById('status-filter').value;
-            const brandFilter = document.getElementById('brand-filter').value;
+            const brandFilterInput = document.getElementById('brand-filter');
+            const brandFilter = brandFilterInput.value.trim();
             const searchFilter = document.getElementById('search-filter').value.toLowerCase();
-            
-            // Update brand filter dropdown
-            const brandFilterSelect = document.getElementById('brand-filter');
-            const currentBrandFilter = brandFilterSelect.value;
-            const uniqueBrands = [...new Set(items.map(item => item.brand))].sort();
-            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
-                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
-            brandFilterSelect.value = currentBrandFilter;
             
             // Filter items
             let filteredItems = items;
@@ -2565,7 +2671,7 @@
                 filteredItems = filteredItems.filter(item => item.status === statusFilter);
             }
             
-            if (brandFilter !== 'all') {
+            if (brandFilter && brandFilter.length > 0) {
                 filteredItems = filteredItems.filter(item => item.brand === brandFilter);
             }
             
@@ -2871,28 +2977,23 @@
         // Update critical items
         function updateCriticalView() {
             const tbody = document.getElementById('critical-items');
-            const brandFilter = document.getElementById('critical-brand-filter').value;
+            const brandFilterInput = document.getElementById('critical-brand-filter');
+            const brandFilter = brandFilterInput.value.trim();
             const searchFilter = document.getElementById('critical-search-filter').value.toLowerCase();
             const sortFilter = document.getElementById('critical-sort-filter').value;
             const dateFrom = document.getElementById('critical-date-from').value;
             const dateTo = document.getElementById('critical-date-to').value;
             
-            // Update brand filter dropdown
-            const brandFilterSelect = document.getElementById('critical-brand-filter');
-            const currentBrandFilter = brandFilterSelect.value;
+            // Get critical items
             const criticalItems = items.filter(item => {
                 const days = daysUntilExpiry(item.expiryDate);
                 return item.status === 'upcoming' && days <= 7 && days >= 0;
             });
-            const uniqueBrands = [...new Set(criticalItems.map(item => item.brand))].sort();
-            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
-                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
-            brandFilterSelect.value = currentBrandFilter;
             
             // Filter items
             let filteredItems = criticalItems;
             
-            if (brandFilter !== 'all') {
+            if (brandFilter && brandFilter.length > 0) {
                 filteredItems = filteredItems.filter(item => item.brand === brandFilter);
             }
             
@@ -2952,28 +3053,23 @@
         // Update already expired view
         function updateAlreadyExpiredView() {
             const tbody = document.getElementById('already-expired-items');
-            const brandFilter = document.getElementById('already-expired-brand-filter').value;
+            const brandFilterInput = document.getElementById('already-expired-brand-filter');
+            const brandFilter = brandFilterInput.value.trim();
             const searchFilter = document.getElementById('already-expired-search-filter').value.toLowerCase();
             const sortFilter = document.getElementById('already-expired-sort-filter').value;
             const dateFrom = document.getElementById('already-expired-date-from').value;
             const dateTo = document.getElementById('already-expired-date-to').value;
             
-            // Update brand filter dropdown
-            const brandFilterSelect = document.getElementById('already-expired-brand-filter');
-            const currentBrandFilter = brandFilterSelect.value;
+            // Get already expired items
             const alreadyExpiredItems = items.filter(item => {
                 const days = daysUntilExpiry(item.expiryDate);
                 return item.status === 'upcoming' && days < 0; // Already expired items
             });
-            const uniqueBrands = [...new Set(alreadyExpiredItems.map(item => item.brand))].sort();
-            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
-                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
-            brandFilterSelect.value = currentBrandFilter;
             
             // Filter items
             let filteredItems = alreadyExpiredItems;
             
-            if (brandFilter !== 'all') {
+            if (brandFilter && brandFilter.length > 0) {
                 filteredItems = filteredItems.filter(item => item.brand === brandFilter);
             }
             
@@ -3034,25 +3130,20 @@
         // Update expiry area
         function updateExpiryAreaView() {
             const tbody = document.getElementById('expiry-area-items');
-            const brandFilter = document.getElementById('expiry-area-brand-filter').value;
+            const brandFilterInput = document.getElementById('expiry-area-brand-filter');
+            const brandFilter = brandFilterInput.value.trim();
             const searchFilter = document.getElementById('expiry-area-search-filter').value.toLowerCase();
             const sortFilter = document.getElementById('expiry-area-sort-filter').value;
             const dateFrom = document.getElementById('expiry-area-date-from').value;
             const dateTo = document.getElementById('expiry-area-date-to').value;
             
-            // Update brand filter dropdown
-            const brandFilterSelect = document.getElementById('expiry-area-brand-filter');
-            const currentBrandFilter = brandFilterSelect.value;
+            // Get expiry area items
             const expiryAreaItems = items.filter(item => item.status === 'expiry-area');
-            const uniqueBrands = [...new Set(expiryAreaItems.map(item => item.brand))].sort();
-            brandFilterSelect.innerHTML = '<option value="all">All Brands</option>' + 
-                uniqueBrands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
-            brandFilterSelect.value = currentBrandFilter;
             
             // Filter items
             let filteredItems = expiryAreaItems;
             
-            if (brandFilter !== 'all') {
+            if (brandFilter && brandFilter.length > 0) {
                 filteredItems = filteredItems.filter(item => item.brand === brandFilter);
             }
             
