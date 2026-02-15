@@ -1419,22 +1419,38 @@
                     }
                     
                     isAddingBrand = true;
+                    
+                    // Get button safely
                     const submitButton = this.querySelector('button[type="submit"]');
-                    const originalButtonText = submitButton.textContent;
-                    submitButton.textContent = 'Adding...';
-                    submitButton.disabled = true;
+                    let originalButtonText = 'Add Brand';
+                    
+                    if (submitButton) {
+                        originalButtonText = submitButton.textContent;
+                        submitButton.textContent = 'Adding...';
+                        submitButton.disabled = true;
+                    }
                     
                     try {
                         const brandName = document.getElementById('new-brand-name').value.trim();
                         
                         if (!brandName) {
                             alert('Please enter a brand name');
+                            isAddingBrand = false;
+                            if (submitButton) {
+                                submitButton.textContent = originalButtonText;
+                                submitButton.disabled = false;
+                            }
                             return;
                         }
                         
                         // Check for duplicates
                         if (brands.find(b => b.name.toLowerCase() === brandName.toLowerCase())) {
                             alert('This brand already exists!');
+                            isAddingBrand = false;
+                            if (submitButton) {
+                                submitButton.textContent = originalButtonText;
+                                submitButton.disabled = false;
+                            }
                             return;
                         }
                         
@@ -1461,13 +1477,23 @@
                             // Brand already in UI, so user isn't blocked
                         });
                         
+                        // Reset button state after success
+                        isAddingBrand = false;
+                        if (submitButton) {
+                            submitButton.textContent = originalButtonText;
+                            submitButton.disabled = false;
+                        }
+                        
                     } catch (error) {
                         console.error('Error adding brand:', error);
-                        alert('Error adding brand. Please try again.');
-                    } finally {
+                        alert('Error adding brand: ' + error.message);
+                        
+                        // Reset button state after error
                         isAddingBrand = false;
-                        submitButton.textContent = originalButtonText;
-                        submitButton.disabled = false;
+                        if (submitButton) {
+                            submitButton.textContent = originalButtonText;
+                            submitButton.disabled = false;
+                        }
                     }
                 }, { once: false }); // Allow multiple submits, but use flag to prevent duplicates
             }
@@ -2294,9 +2320,11 @@
         }
         
         // OPTIMIZED: Update only brand-related views (for brand additions/deletions)
+        // OPTIMIZED: Update only brand-related views (for brand additions/deletions)
         function updateBrandViews() {
-            updateBrandDropdown();
             updateBrandsList();
+            // Note: Brand autocomplete reads directly from brands array via getSortedBrands()
+            // so no explicit update needed - invalidateBrandCache() is called before this
         }
         
         // OPTIMIZED: Update only item-related views (for item additions/edits)
