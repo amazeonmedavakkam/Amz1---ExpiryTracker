@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <!-- 
-    EXPIRY TRACKER - COMPLETE VERSION
-    Version: 2.0 (February 2026)
+    EXPIRY TRACKER - PERFORMANCE OPTIMIZED VERSION
+    Version: 2.1 FAST (February 2026)
+    
+    PERFORMANCE IMPROVEMENTS:
+    ✅ Separate save functions - saveItems() and saveBrands() to avoid saving everything
+    ✅ Selective view updates - updateItemViews() and updateBrandViews() instead of updateAllViews()
+    ✅ Non-blocking saves - Background saves don't block user interface
+    ✅ Optimistic UI updates - UI updates immediately, save happens in background
+    ✅ Loading indicators on buttons
+    
     Features: All original tabs + Already Expired tab + Cross-device password sync
     Tabs: Add Items, Brand Master, Master Data, Upcoming, Critical, Already Expired, Expiry Area, Analytics, Reports
 -->
@@ -1379,24 +1387,24 @@
                     returnedDate: null
                 };
                 
-                // OPTIMISTIC UPDATE: Add to UI immediately
+                // OPTIMIZED: Add to UI immediately
                 items.push(item);
-                updateAllViews();
+                updateItemViews(); // Only update item-related views, not brand views
                 
                 this.reset();
                 // Pre-fill staff name again after reset
                 document.getElementById('staff-name').value = currentUser.name;
                 alert('Item added successfully!');
                 
-                // Save to server in background (non-blocking)
-                saveData().catch(error => {
+                // OPTIMIZED: Save ONLY items in background (non-blocking, don't save brands)
+                saveItems().catch(error => {
                     console.error('Background save failed:', error);
                     // Item already in UI, so user isn't blocked
                 });
             });
 
             // Add brand form handler
-            // Add brand form handler (with duplicate prevention)
+            // OPTIMIZED: Add brand handler (with duplicate prevention)
             const addBrandForm = document.getElementById('add-brand-form');
             let isAddingBrand = false; // Prevent duplicate submissions
             
@@ -1411,6 +1419,10 @@
                     }
                     
                     isAddingBrand = true;
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    const originalButtonText = submitButton.textContent;
+                    submitButton.textContent = 'Adding...';
+                    submitButton.disabled = true;
                     
                     try {
                         const brandName = document.getElementById('new-brand-name').value.trim();
@@ -1434,27 +1446,28 @@
                         
                         console.log('Adding brand:', brandName);
                         
-                        // Add to array
+                        // OPTIMIZED: Add to array and update UI immediately
                         brands.push(brand);
                         invalidateBrandCache();
+                        updateBrandViews(); // Only update brand-related views
                         
-                        // Save immediately and WAIT for completion
-                        console.log('Saving brands... Total:', brands.length);
-                        await saveData();
-                        console.log('Brand saved successfully');
-                        
-                        // Update UI
+                        // Clear form and show success
                         this.reset();
-                        updateBrandsList();
-                        
-                        // Show success message
                         alert('Brand added successfully!');
+                        
+                        // OPTIMIZED: Save ONLY brands in background (non-blocking, don't save items)
+                        saveBrands().catch(error => {
+                            console.error('Background brand save failed:', error);
+                            // Brand already in UI, so user isn't blocked
+                        });
                         
                     } catch (error) {
                         console.error('Error adding brand:', error);
                         alert('Error adding brand. Please try again.');
                     } finally {
                         isAddingBrand = false;
+                        submitButton.textContent = originalButtonText;
+                        submitButton.disabled = false;
                     }
                 }, { once: false }); // Allow multiple submits, but use flag to prevent duplicates
             }
@@ -1806,6 +1819,16 @@
         }
 
         // Save data
+        // OPTIMIZED: Separate save functions to avoid saving everything every time
+        async function saveItems() {
+            await storage.set('expiry-items', items);
+        }
+        
+        async function saveBrands() {
+            await storage.set('expiry-brands', brands);
+        }
+        
+        // Save both (only use when both actually changed)
         async function saveData() {
             await storage.set('expiry-items', items);
             await storage.set('expiry-brands', brands);
@@ -2067,8 +2090,8 @@
             
             brands = brands.filter(b => b.id !== id);
             invalidateBrandCache(); // Invalidate sorted cache
-            await saveData();
-            updateBrandsList();
+            await saveBrands(); // OPTIMIZED: Only save brands, not items
+            updateBrandViews(); // OPTIMIZED: Only update brand views
         }
 
         // Reset item status (Admin only - for fixing stuck items)
@@ -2117,7 +2140,7 @@
                 }
             }
             
-            await saveData();
+            await saveItems(); // OPTIMIZED: Only save items, not brands
             await autoRefreshData();
             alert(`Item status reset to: ${newStatus}`);
         }
@@ -2149,9 +2172,9 @@
             item.quantity = parseInt(quantity) || item.quantity;
             item.expiryDate = expiryDate || item.expiryDate;
             
-            await saveData();
+            await saveItems(); // OPTIMIZED: Only save items, not brands
             alert('Item updated successfully!');
-            updateAllViews();
+            updateItemViews(); // OPTIMIZED: Only update item views
         }
 
         // Move to expiry area (with error handling)
@@ -2191,16 +2214,16 @@
                     return;
                 }
                 
-                // OPTIMISTIC UPDATE: Update UI immediately
+                // OPTIMIZED: Update UI immediately
                 item.status = 'expiry-area';
                 item.movedBy = personName.trim();
                 item.movedDate = new Date().toISOString();
                 
-                updateAllViews();
+                updateItemViews(); // OPTIMIZED: Only update item views
                 alert('Item moved to expiry area successfully!');
                 
-                // Save to server in background (non-blocking)
-                saveData().catch(error => {
+                // OPTIMIZED: Save ONLY items in background (non-blocking)
+                saveItems().catch(error => {
                     console.error('Background save failed:', error);
                     alert('Warning: Item moved in app but may not be saved to server. Please check connection.');
                 });
@@ -2235,16 +2258,16 @@
                     return;
                 }
                 
-                // OPTIMISTIC UPDATE: Update UI immediately
+                // OPTIMIZED: Update UI immediately
                 item.status = 'returned';
                 item.returnedBy = personName.trim();
                 item.returnedDate = new Date().toISOString();
                 
-                updateAllViews();
+                updateItemViews(); // OPTIMIZED: Only update item views
                 alert('Item marked as returned successfully!');
                 
-                // Save to server in background (non-blocking)
-                saveData().catch(error => {
+                // OPTIMIZED: Save ONLY items in background (non-blocking)
+                saveItems().catch(error => {
                     console.error('Background save failed:', error);
                     alert('Warning: Item marked in app but may not be saved to server. Please check connection.');
                 });
@@ -2256,6 +2279,7 @@
         }
 
         // Update all views
+        // OPTIMIZED: Update all views (use sparingly!)
         function updateAllViews() {
             updateMasterDataView();
             updateUpcomingView();
@@ -2265,6 +2289,25 @@
             updateAnalyticsView();
             updateReportsView();
             updateBrandsList();
+            updateStats();
+            updateAlerts();
+        }
+        
+        // OPTIMIZED: Update only brand-related views (for brand additions/deletions)
+        function updateBrandViews() {
+            updateBrandDropdown();
+            updateBrandsList();
+        }
+        
+        // OPTIMIZED: Update only item-related views (for item additions/edits)
+        function updateItemViews() {
+            updateMasterDataView();
+            updateUpcomingView();
+            updateCriticalView();
+            updateAlreadyExpiredView();
+            updateExpiryAreaView();
+            updateAnalyticsView();
+            updateReportsView();
             updateStats();
             updateAlerts();
         }
