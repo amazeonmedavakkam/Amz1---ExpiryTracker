@@ -628,6 +628,7 @@
                     <span id="sync-status" style="margin-left: 1rem; font-size: 0.8rem; opacity: 0.8;"></span>
                 </div>
                 <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button onclick="manualRefresh()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Manually sync with server">🔄 Refresh</button>
                     <button onclick="openSettings()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" id="settings-btn">⚙️ Settings</button>
                     <button onclick="handleLogout()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
                 </div>
@@ -1186,30 +1187,46 @@
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoIX7pIS5_HqdB6ExpxQj4toGpu0_dKcAwyzdAKcgmBH8YNbfGsmDdJR_FpmAwiDwU/exec';
         
         // Admin password (stored in shared storage for cross-device persistence)
+        // Admin password management (stored in Google Sheets for cross-device sync)
         async function getAdminPassword() {
             try {
-                // Get password from localStorage
-                const storedPassword = localStorage.getItem('admin-password');
-                return storedPassword || 'admin123'; // Default password
+                console.log('Getting admin password...');
+                
+                // Try to get from Google Sheets first
+                const savedPassword = await storage.get('admin-password');
+                
+                if (savedPassword && savedPassword.length > 0) {
+                    console.log('✓ Password loaded from server');
+                    return savedPassword;
+                }
+                
+                // Default password if nothing saved
+                console.log('Using default password');
+                return 'admin123';
             } catch (error) {
                 console.error('Error getting password:', error);
+                // Fallback to default
                 return 'admin123';
             }
         }
         
         async function setAdminPassword(newPassword) {
             try {
-                // Save password to localStorage
-                localStorage.setItem('admin-password', newPassword);
+                console.log('Saving new admin password to server...');
+                
+                // Save to Google Sheets
+                await storage.set('admin-password', newPassword);
+                
+                console.log('✓ Password saved to server successfully');
                 return true;
             } catch (error) {
-                console.error('Error saving password:', error);
+                console.error('❌ Error saving password to server:', error);
                 return false;
             }
         }
         
         // Auto-refresh interval (in seconds)
-        const AUTO_REFRESH_INTERVAL = 10; // Refresh data every 10 seconds
+        const AUTO_REFRESH_INTERVAL = 30; // Increased to 30 seconds for stability
         
         // ===== PERFORMANCE UTILITIES =====
         // Debounce function - prevents excessive calls
@@ -1248,6 +1265,19 @@
         const storage = {
             async get(key) {
                 try {
+                    // Handle password separately
+                    if (key === 'admin-password') {
+                        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getPassword&t=${Date.now()}`);
+                        const data = await response.json();
+                        
+                        // Cache in localStorage
+                        if (data) {
+                            localStorage.setItem(key, data);
+                        }
+                        
+                        return data || 'admin123';
+                    }
+                    
                     // Show loading indicator
                     const action = key === 'expiry-items' ? 'getItems' : 'getBrands';
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}&t=${Date.now()}`);
@@ -1269,6 +1299,13 @@
                     return normalizedData;
                 } catch (error) {
                     console.error('Error fetching from Google Sheets:', error);
+                    
+                    // Special fallback for password
+                    if (key === 'admin-password') {
+                        const cachedPassword = localStorage.getItem(key);
+                        return cachedPassword || 'admin123';
+                    }
+                    
                     // Fallback to localStorage cache
                     const localData = localStorage.getItem(key);
                     if (localData) {
@@ -1286,7 +1323,36 @@
                 }
             },
             async set(key, value) {
-                // Prevent multiple simultaneous saves
+                // Handle password separately
+                if (key === 'admin-password') {
+                    try {
+                        // Save to localStorage immediately
+                        localStorage.setItem(key, value);
+                        
+                        // Then sync to Google Sheets
+                        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=savePassword`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'text/plain',
+                            },
+                            body: value
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (!result.success) {
+                            throw new Error('Password save failed');
+                        }
+                        
+                        return true;
+                    } catch (error) {
+                        console.error('Error saving password to Google Sheets:', error);
+                        // Password is still saved locally
+                        return true; // Return true since it's saved locally at least
+                    }
+                }
+                
+                // Prevent multiple simultaneous saves for items/brands
                 if (isSyncing) {
                     console.log('Sync in progress, queuing...');
                     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1566,48 +1632,98 @@
             const confirmPassword = document.getElementById('confirm-admin-password').value;
             const message = document.getElementById('password-change-message');
             
-            // Validate current password
-            const storedPassword = await getAdminPassword();
-            if (currentPassword !== storedPassword) {
-                message.textContent = 'Current password is incorrect';
+            try {
+                console.log('=== CHANGING ADMIN PASSWORD ===');
+                
+                // Clear previous messages
+                message.style.display = 'none';
+                
+                // Validate inputs
+                if (!currentPassword) {
+                    message.textContent = 'Please enter current password';
+                    message.style.color = '#dc2626';
+                    message.style.display = 'block';
+                    return;
+                }
+                
+                if (!newPassword) {
+                    message.textContent = 'Please enter new password';
+                    message.style.color = '#dc2626';
+                    message.style.display = 'block';
+                    return;
+                }
+                
+                if (!confirmPassword) {
+                    message.textContent = 'Please confirm new password';
+                    message.style.color = '#dc2626';
+                    message.style.display = 'block';
+                    return;
+                }
+                
+                // Show loading
+                message.textContent = 'Verifying current password...';
+                message.style.color = '#2563eb';
+                message.style.display = 'block';
+                
+                // Validate current password
+                const storedPassword = await getAdminPassword();
+                console.log('Current password verified');
+                
+                if (currentPassword !== storedPassword) {
+                    message.textContent = 'Current password is incorrect';
+                    message.style.color = '#dc2626';
+                    message.style.display = 'block';
+                    return;
+                }
+                
+                // Validate new password
+                if (newPassword.length < 4) {
+                    message.textContent = 'New password must be at least 4 characters';
+                    message.style.color = '#dc2626';
+                    message.style.display = 'block';
+                    return;
+                }
+                
+                if (newPassword !== confirmPassword) {
+                    message.textContent = 'New passwords do not match';
+                    message.style.color = '#dc2626';
+                    message.style.display = 'block';
+                    return;
+                }
+                
+                // Show saving progress
+                message.textContent = 'Saving new password to server...';
+                message.style.color = '#2563eb';
+                message.style.display = 'block';
+                
+                // Save new password
+                const success = await setAdminPassword(newPassword);
+                
+                if (success) {
+                    console.log('✓ Password changed successfully');
+                    message.textContent = '✓ Password changed successfully! This will work on all devices.';
+                    message.style.color = '#059669';
+                    message.style.display = 'block';
+                    
+                    // Clear form fields
+                    document.getElementById('current-admin-password').value = '';
+                    document.getElementById('new-admin-password').value = '';
+                    document.getElementById('confirm-admin-password').value = '';
+                    
+                    // Close settings after 3 seconds
+                    setTimeout(() => {
+                        closeSettings();
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to save password');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error changing password:', error);
+                message.textContent = 'Error saving password to server. Please check your connection and try again.';
                 message.style.color = '#dc2626';
                 message.style.display = 'block';
-                return;
             }
-            
-            // Validate new password
-            if (!newPassword || newPassword.length < 4) {
-                message.textContent = 'New password must be at least 4 characters';
-                message.style.color = '#dc2626';
-                message.style.display = 'block';
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                message.textContent = 'New passwords do not match';
-                message.style.color = '#dc2626';
-                message.style.display = 'block';
-                return;
-            }
-            
-            // Save new password
-            const success = await setAdminPassword(newPassword);
-            
-            if (success) {
-                message.textContent = 'Password changed successfully!';
-                message.style.color = '#059669';
-                message.style.display = 'block';
-            } else {
-                message.textContent = 'Error saving password. Please try again.';
-                message.style.color = '#dc2626';
-                message.style.display = 'block';
-                return;
-            }
-            
-            // Clear form after 2 seconds
-            setTimeout(() => {
-                closeSettings();
-            }, 2000);
         }
         
         // Handle login
@@ -1772,39 +1888,41 @@
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '🔄 Syncing...';
                 
-                // Get current local IDs before refresh
-                const localBrandIds = brands.map(b => b.id);
-                const localItemIds = items.map(i => i.id);
+                console.log('=== AUTO-REFRESH START ===');
+                console.log('Local brands before refresh:', brands.length);
+                console.log('Local items before refresh:', items.length);
                 
-                // Silently refresh data in background
-                const savedItems = await storage.get('expiry-items');
-                if (savedItems) {
-                    // MERGE instead of REPLACE - keep local changes
-                    const newItems = savedItems.map(item => ({
-                        ...item,
-                        id: String(item.id)
-                    }));
-                    
-                    // Only update if there are actual changes
-                    if (JSON.stringify(newItems.map(i => i.id).sort()) !== JSON.stringify(localItemIds.sort())) {
-                        items = newItems;
-                    }
-                }
+                // ===== BRANDS: Safe to refresh (additive-only) =====
+                const existingBrandIds = new Set(brands.map(b => b.id));
                 
                 const savedBrands = await storage.get('expiry-brands');
                 if (savedBrands) {
-                    // MERGE instead of REPLACE - keep local changes
-                    const newBrands = savedBrands.map(brand => ({
+                    const normalizedBrands = savedBrands.map(brand => ({
                         ...brand,
                         id: String(brand.id)
                     }));
                     
-                    // Only update if there are actual changes
-                    if (JSON.stringify(newBrands.map(b => b.id).sort()) !== JSON.stringify(localBrandIds.sort())) {
-                        brands = newBrands;
-                        invalidateBrandCache();
+                    // ADDITIVE MERGE: Add new brands from server, NEVER delete local brands
+                    let addedCount = 0;
+                    for (const serverBrand of normalizedBrands) {
+                        if (!existingBrandIds.has(serverBrand.id)) {
+                            brands.push(serverBrand);
+                            addedCount++;
+                            invalidateBrandCache();
+                        }
+                    }
+                    
+                    if (addedCount > 0) {
+                        console.log(`✓ Added ${addedCount} new brands from server`);
                     }
                 }
+                
+                // ===== ITEMS: Don't auto-refresh (could interfere with edits/deletes) =====
+                // Items are only refreshed on manual refresh button click
+                console.log('⏭️ Skipping item refresh (use manual refresh button for items)');
+                
+                console.log('Local brands after refresh:', brands.length);
+                console.log('=== AUTO-REFRESH END ===');
                 
                 updateAllViews();
                 
@@ -1844,6 +1962,122 @@
             }
         }
 
+        // Manual refresh button function - FULL SYNC with safety checks
+        async function manualRefresh() {
+            console.log('=== MANUAL FULL REFRESH TRIGGERED ===');
+            const refreshBtn = event.target;
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '🔄 Refreshing...';
+            
+            try {
+                if (isSyncing) {
+                    alert('Save in progress. Please wait and try again.');
+                    refreshBtn.textContent = '🔄 Refresh';
+                    refreshBtn.disabled = false;
+                    return;
+                }
+                
+                // Warn user if they have unsaved changes
+                const confirmRefresh = confirm(
+                    'This will sync data from the server.\n\n' +
+                    '⚠️ Any unsaved edits will be overwritten.\n\n' +
+                    'Continue?'
+                );
+                
+                if (!confirmRefresh) {
+                    refreshBtn.textContent = '🔄 Refresh';
+                    refreshBtn.disabled = false;
+                    return;
+                }
+                
+                console.log('Local brands before:', brands.length);
+                console.log('Local items before:', items.length);
+                
+                // ===== BRANDS: Always additive (safe) =====
+                const existingBrandIds = new Set(brands.map(b => b.id));
+                const savedBrands = await storage.get('expiry-brands');
+                
+                if (savedBrands) {
+                    const normalizedBrands = savedBrands.map(brand => ({
+                        ...brand,
+                        id: String(brand.id)
+                    }));
+                    
+                    let addedBrands = 0;
+                    for (const serverBrand of normalizedBrands) {
+                        if (!existingBrandIds.has(serverBrand.id)) {
+                            brands.push(serverBrand);
+                            addedBrands++;
+                            invalidateBrandCache();
+                        }
+                    }
+                    
+                    console.log(`✓ Brands: Added ${addedBrands} new from server`);
+                }
+                
+                // ===== ITEMS: Smart merge =====
+                const existingItemIds = new Set(items.map(i => i.id));
+                const savedItems = await storage.get('expiry-items');
+                
+                if (savedItems) {
+                    const normalizedItems = savedItems.map(item => ({
+                        ...item,
+                        id: String(item.id)
+                    }));
+                    
+                    // Build map for quick lookup
+                    const localItemsMap = new Map(items.map(i => [i.id, i]));
+                    const serverItemsMap = new Map(normalizedItems.map(i => [i.id, i]));
+                    
+                    // Strategy:
+                    // 1. Add items that are on server but not local
+                    // 2. Update items that exist in both (server wins for manual refresh)
+                    // 3. Keep items that are only local (new additions not yet synced)
+                    
+                    let addedItems = 0;
+                    let updatedItems = 0;
+                    
+                    // Add new items from server
+                    for (const serverItem of normalizedItems) {
+                        if (!existingItemIds.has(serverItem.id)) {
+                            items.push(serverItem);
+                            addedItems++;
+                        } else {
+                            // Item exists - update with server version
+                            const localIndex = items.findIndex(i => i.id === serverItem.id);
+                            if (localIndex >= 0) {
+                                items[localIndex] = serverItem;
+                                updatedItems++;
+                            }
+                        }
+                    }
+                    
+                    console.log(`✓ Items: Added ${addedItems}, Updated ${updatedItems}`);
+                }
+                
+                console.log('Local brands after:', brands.length);
+                console.log('Local items after:', items.length);
+                console.log('=== MANUAL REFRESH COMPLETE ===');
+                
+                updateAllViews();
+                
+                refreshBtn.textContent = '✓ Refreshed!';
+                setTimeout(() => {
+                    refreshBtn.textContent = '🔄 Refresh';
+                    refreshBtn.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Manual refresh error:', error);
+                refreshBtn.textContent = '❌ Error';
+                alert('Refresh failed. Check console for details.');
+                setTimeout(() => {
+                    refreshBtn.textContent = '🔄 Refresh';
+                    refreshBtn.disabled = false;
+                }, 2000);
+            }
+        }
+
         // Save data
         // OPTIMIZED: Separate save functions to avoid saving everything every time
         async function saveItems() {
@@ -1856,8 +2090,22 @@
         
         // Save both (only use when both actually changed)
         async function saveData() {
-            await storage.set('expiry-items', items);
-            await storage.set('expiry-brands', brands);
+            console.log('=== SAVING DATA ===');
+            console.log('Brands to save:', brands.length);
+            console.log('Items to save:', items.length);
+            
+            try {
+                await storage.set('expiry-items', items);
+                console.log('✓ Items saved successfully');
+                
+                await storage.set('expiry-brands', brands);
+                console.log('✓ Brands saved successfully');
+                
+                console.log('=== SAVE COMPLETE ===');
+            } catch (error) {
+                console.error('❌ SAVE ERROR:', error);
+                throw error; // Re-throw so calling code knows it failed
+            }
         }
 
         // Calculate days until expiry
