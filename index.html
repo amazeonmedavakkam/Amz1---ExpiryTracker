@@ -706,6 +706,45 @@
                 </form>
             </div>
 
+            <!-- Bulk Upload Section -->
+            <div class="card" style="background: linear-gradient(135deg, #e8f5e9 0%, #f8fdf9 100%); border-left: 5px solid var(--primary);">
+                <h2>📤 Bulk Upload Brands from Excel</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1rem;">Upload an Excel file (.xlsx, .xls) with brand names to add multiple brands at once.</p>
+                
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">📋 Excel Format Required:</h3>
+                    <div style="background: var(--bg); padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem;">
+                        <strong>Column A:</strong> Brand Name<br>
+                        <span style="color: var(--text-muted);">Row 1: Header (optional)</span><br>
+                        <span style="color: var(--text-muted);">Row 2+: Brand names</span>
+                    </div>
+                    <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Example: Nestle, Amul, Britannia, Parle, etc.</p>
+                </div>
+
+                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <input type="file" id="brand-excel-upload" accept=".xlsx,.xls" style="display: none;">
+                    <button onclick="document.getElementById('brand-excel-upload').click()" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
+                        📁 Choose Excel File
+                    </button>
+                    <span id="excel-filename" style="color: var(--text-muted); font-size: 0.9rem;"></span>
+                </div>
+
+                <!-- Preview Section -->
+                <div id="excel-preview" style="display: none; margin-top: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem;">Preview Brands:</h3>
+                    <div style="max-height: 200px; overflow-y: auto; background: white; padding: 1rem; border-radius: 8px; border: 2px solid var(--border);">
+                        <div id="excel-preview-list"></div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                        <button onclick="importBrandsFromExcel()" class="btn btn-success">✓ Import <span id="import-count">0</span> Brands</button>
+                        <button onclick="cancelExcelUpload()" class="btn btn-danger">✗ Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Import Status -->
+                <div id="excel-import-status" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px;"></div>
+            </div>
+
             <div class="card">
                 <h2>Existing Brands</h2>
                 <div class="table-container">
@@ -2368,6 +2407,184 @@
             updateBrandViews(); // OPTIMIZED: Only update brand views
         }
 
+        // ===== EXCEL BULK UPLOAD FUNCTIONS =====
+        
+        let excelBrandsToImport = [];
+        
+        // Handle Excel file selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('brand-excel-upload');
+            if (fileInput) {
+                fileInput.addEventListener('change', handleExcelUpload);
+            }
+        });
+        
+        async function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('=== EXCEL UPLOAD START ===');
+            console.log('File:', file.name, 'Size:', file.size);
+            
+            // Show filename
+            document.getElementById('excel-filename').textContent = file.name;
+            
+            try {
+                // Read file
+                const data = await file.arrayBuffer();
+                
+                // Parse with SheetJS
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                console.log('Rows found:', jsonData.length);
+                
+                // Extract brand names
+                excelBrandsToImport = [];
+                const startRow = jsonData[0] && (jsonData[0][0] || '').toString().toLowerCase().includes('brand') ? 1 : 0;
+                
+                for (let i = startRow; i < jsonData.length; i++) {
+                    const brandName = (jsonData[i][0] || '').toString().trim();
+                    if (brandName && brandName.length > 0) {
+                        excelBrandsToImport.push(brandName);
+                    }
+                }
+                
+                console.log('Valid brands extracted:', excelBrandsToImport.length);
+                
+                if (excelBrandsToImport.length === 0) {
+                    alert('No brand names found in Excel file. Please check the format.');
+                    return;
+                }
+                
+                // Remove duplicates within the file
+                excelBrandsToImport = [...new Set(excelBrandsToImport)];
+                
+                // Check for existing brands
+                const existingBrandNames = new Set(brands.map(b => b.name.toLowerCase()));
+                const newBrands = excelBrandsToImport.filter(name => !existingBrandNames.has(name.toLowerCase()));
+                const duplicates = excelBrandsToImport.filter(name => existingBrandNames.has(name.toLowerCase()));
+                
+                // Show preview
+                showExcelPreview(newBrands, duplicates);
+                
+            } catch (error) {
+                console.error('Error reading Excel:', error);
+                alert('Error reading Excel file. Please make sure it\'s a valid .xlsx or .xls file.');
+            }
+        }
+        
+        function showExcelPreview(newBrands, duplicates) {
+            const previewDiv = document.getElementById('excel-preview');
+            const listDiv = document.getElementById('excel-preview-list');
+            const importCount = document.getElementById('import-count');
+            
+            let html = '';
+            
+            // Show new brands
+            if (newBrands.length > 0) {
+                html += '<div style="margin-bottom: 1rem;"><strong style="color: var(--success);">✓ New brands to import (' + newBrands.length + '):</strong><br>';
+                html += '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">';
+                newBrands.forEach(name => {
+                    html += '<span style="background: var(--bg-secondary); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">' + name + '</span>';
+                });
+                html += '</div></div>';
+            }
+            
+            // Show duplicates
+            if (duplicates.length > 0) {
+                html += '<div><strong style="color: var(--text-muted);">⚠️ Already exist (will be skipped) (' + duplicates.length + '):</strong><br>';
+                html += '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">';
+                duplicates.forEach(name => {
+                    html += '<span style="background: #f0f0f0; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; color: #999;">' + name + '</span>';
+                });
+                html += '</div></div>';
+            }
+            
+            listDiv.innerHTML = html;
+            importCount.textContent = newBrands.length;
+            previewDiv.style.display = 'block';
+            
+            // Store only new brands for import
+            excelBrandsToImport = newBrands;
+        }
+        
+        async function importBrandsFromExcel() {
+            if (excelBrandsToImport.length === 0) {
+                alert('No new brands to import');
+                return;
+            }
+            
+            console.log('=== IMPORTING BRANDS ===');
+            console.log('Count:', excelBrandsToImport.length);
+            
+            const statusDiv = document.getElementById('excel-import-status');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#e8f5e9';
+            statusDiv.style.border = '2px solid var(--success)';
+            statusDiv.innerHTML = '<strong>⏳ Importing brands...</strong><br>Please wait...';
+            
+            try {
+                let imported = 0;
+                
+                // Add all brands
+                for (const brandName of excelBrandsToImport) {
+                    const brand = {
+                        id: Date.now().toString() + '_' + imported,
+                        name: brandName,
+                        createdDate: new Date().toISOString()
+                    };
+                    
+                    brands.push(brand);
+                    imported++;
+                    
+                    // Update status
+                    statusDiv.innerHTML = `<strong>⏳ Importing brands...</strong><br>Progress: ${imported} / ${excelBrandsToImport.length}`;
+                    
+                    // Small delay to prevent overwhelming the system
+                    if (imported % 10 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                }
+                
+                // Invalidate cache and save
+                invalidateBrandCache();
+                
+                statusDiv.innerHTML = '<strong>💾 Saving to Google Sheets...</strong><br>This may take a few seconds...';
+                
+                await saveData();
+                
+                console.log('✓ All brands imported and saved');
+                
+                // Update UI
+                updateBrandsList();
+                
+                // Show success
+                statusDiv.style.background = '#d1fae5';
+                statusDiv.innerHTML = `<strong>✓ Success!</strong><br>Imported ${imported} brands successfully!`;
+                
+                // Clear preview
+                setTimeout(() => {
+                    cancelExcelUpload();
+                    statusDiv.style.display = 'none';
+                }, 3000);
+                
+            } catch (error) {
+                console.error('❌ Import error:', error);
+                statusDiv.style.background = '#fee';
+                statusDiv.style.border = '2px solid var(--danger)';
+                statusDiv.innerHTML = '<strong>❌ Error!</strong><br>' + error.message;
+            }
+        }
+        
+        function cancelExcelUpload() {
+            document.getElementById('brand-excel-upload').value = '';
+            document.getElementById('excel-filename').textContent = '';
+            document.getElementById('excel-preview').style.display = 'none';
+            excelBrandsToImport = [];
+        }
+
         // Reset item status (Admin only - for fixing stuck items)
         async function resetItemStatus(id) {
             if (currentUser.role !== 'admin') {
@@ -3852,5 +4069,8 @@
             container.innerHTML = alertsHTML;
         }
     </script>
+    
+    <!-- SheetJS Library for Excel Import -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
