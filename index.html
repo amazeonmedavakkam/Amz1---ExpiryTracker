@@ -621,6 +621,11 @@
             </div>
             <button onclick="handleLogin()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Login</button>
             <p id="login-error" style="color: #dc2626; margin-top: 1rem; text-align: center; display: none;"></p>
+            <div id="admin-reset-link" style="display: none; text-align: center; margin-top: 0.75rem;">
+                <a href="#" onclick="resetPasswordCache(); return false;" style="font-size: 0.85rem; color: #6b7280; text-decoration: underline;">
+                    🔑 Forgot password? Click to reset cache
+                </a>
+            </div>
         </div>
     </div>
 
@@ -712,14 +717,18 @@
             <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">⚙️ Settings</h2>
             
             <div id="admin-settings" style="display: none;">
-                <h3 style="color: var(--primary); margin-bottom: 1rem; font-size: 1.1rem;">Change Admin Password</h3>
+                <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.1rem;">Change Admin Password</h3>
+                <div style="background: #f0fdf4; border-left: 4px solid var(--accent); padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light);">
+                    ✅ When you change the password here, it syncs to the server so <strong>all devices</strong> (all staff/admin phones and computers using this tracker) will use the new password automatically.<br><br>
+                    📌 <strong>Default password is:</strong> <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 4px; font-size: 0.9rem;">admin123</code>
+                </div>
                 <div class="form-group">
                     <label>Current Password</label>
                     <input type="password" id="current-admin-password" style="width: 100%;" placeholder="Enter current password">
                 </div>
                 <div class="form-group" style="margin-top: 1rem;">
                     <label>New Password</label>
-                    <input type="password" id="new-admin-password" style="width: 100%;" placeholder="Enter new password">
+                    <input type="password" id="new-admin-password" style="width: 100%;" placeholder="Enter new password (min 4 characters)">
                 </div>
                 <div class="form-group" style="margin-top: 1rem;">
                     <label>Confirm New Password</label>
@@ -727,6 +736,9 @@
                 </div>
                 <button onclick="changeAdminPassword()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Change Password</button>
                 <p id="password-change-message" style="margin-top: 1rem; text-align: center; display: none;"></p>
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #fff7ed; border-radius: 6px; border-left: 4px solid #f97316; font-size: 0.82rem; color: #92400e;">
+                    ⚠️ <strong>Locked out?</strong> Use the <em>"Forgot password?"</em> reset link on the login screen to clear the local cache and restore the default, then change to a new password.
+                </div>
             </div>
             
             <div id="staff-settings">
@@ -1470,29 +1482,56 @@
         // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoIX7pIS5_HqdB6ExpxQj4toGpu0_dKcAwyzdAKcgmBH8YNbfGsmDdJR_FpmAwiDwU/exec';
         
-        // Admin password (stored in shared storage for cross-device persistence)
-        // Admin password management (stored in Google Sheets for cross-device sync)
+        // ===== PASSWORD MANAGEMENT =====
+        // 3-layer fallback: Google Sheets → localStorage → default 'admin123'
+        // This ensures login ALWAYS works even if server or cache has issues.
+        
+        const DEFAULT_PASSWORD = 'admin123';
+        
         async function getAdminPassword() {
+            // Layer 1: Try Google Sheets (source of truth for cross-device sync)
             try {
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getPassword&t=${Date.now()}`);
-                const data = await response.json();
-                const pwd = (typeof data === 'string' ? data : (data.password || data.value || '')).trim();
-                if (pwd) {
-                    localStorage.setItem('admin-password', pwd);
-                    return pwd;
+                if (response.ok) {
+                    const data = await response.json();
+                    // Handle any response shape the server might return
+                    let pwd = '';
+                    if (typeof data === 'string') {
+                        pwd = data.trim();
+                    } else if (data && typeof data === 'object') {
+                        pwd = String(data.password || data.value || data.data || '').trim();
+                    }
+                    // Only use server value if it looks like a real password (4+ chars, not an error message)
+                    if (pwd && pwd.length >= 4 && !pwd.toLowerCase().includes('error') && !pwd.startsWith('<')) {
+                        localStorage.setItem('admin-password', pwd);
+                        console.log('✓ Password loaded from server');
+                        return pwd;
+                    }
                 }
             } catch (error) {
-                console.error('Error fetching password from server:', error);
+                console.warn('⚠ Server password fetch failed, trying local cache...');
             }
-            // Fallback to cached local value, then default
-            return localStorage.getItem('admin-password') || 'admin123';
+            
+            // Layer 2: localStorage cache (used when server is unavailable)
+            const cached = localStorage.getItem('admin-password');
+            if (cached && cached.length >= 4 && !cached.startsWith('<')) {
+                console.log('✓ Password loaded from local cache');
+                return cached;
+            }
+            
+            // Layer 3: Default — also save it so future fetches are consistent
+            console.log('✓ Using default password');
+            localStorage.setItem('admin-password', DEFAULT_PASSWORD);
+            return DEFAULT_PASSWORD;
         }
         
         async function setAdminPassword(newPassword) {
+            // Save locally first so it takes effect immediately on this device
+            localStorage.setItem('admin-password', newPassword);
+            console.log('✓ Password saved locally');
+            
+            // Then push to Google Sheets for cross-device sync
             try {
-                // Save locally first for immediate effect
-                localStorage.setItem('admin-password', newPassword);
-
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=savePassword`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
@@ -1500,18 +1539,20 @@
                 });
                 const result = await response.json();
                 if (result && result.success) {
-                    console.log('✓ Password saved to server');
-                    return true;
+                    console.log('✓ Password synced to server (all devices updated)');
+                } else {
+                    console.warn('⚠ Server sync response:', result, '— password saved locally only');
                 }
-                // If server says not success but responded, still treat as ok
-                // (old scripts may return different shapes)
-                console.warn('Server response:', result);
-                return true;
             } catch (error) {
-                console.error('Error saving password to server:', error);
-                // Saved locally at least — still return true so UX works
-                return true;
+                console.warn('⚠ Server sync failed — password saved locally only:', error.message);
             }
+            return true; // Always succeed — local save is guaranteed
+        }
+        
+        // Emergency reset: clears any corrupted cached password so default kicks in
+        function resetPasswordCache() {
+            localStorage.removeItem('admin-password');
+            alert('✅ Password cache cleared.\n\nYou can now log in with the default password: admin123\n\nIf you have set a custom password via Settings, it will be fetched from the server on next login.');
         }
         
         // Auto-refresh interval (in seconds)
@@ -1554,17 +1595,9 @@
         const storage = {
             async get(key) {
                 try {
-                    // Handle password separately
+                    // Password handled by dedicated getAdminPassword() function
                     if (key === 'admin-password') {
-                        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getPassword&t=${Date.now()}`);
-                        const data = await response.json();
-                        
-                        // Cache in localStorage
-                        if (data) {
-                            localStorage.setItem(key, data);
-                        }
-                        
-                        return data || 'admin123';
+                        return await getAdminPassword();
                     }
                     
                     // Show loading indicator
@@ -1589,10 +1622,9 @@
                 } catch (error) {
                     console.error('Error fetching from Google Sheets:', error);
                     
-                    // Special fallback for password
+                    // Special fallback for password — use dedicated function
                     if (key === 'admin-password') {
-                        const cachedPassword = localStorage.getItem(key);
-                        return cachedPassword || 'admin123';
+                        return await getAdminPassword();
                     }
                     
                     // Fallback to localStorage cache
@@ -1901,6 +1933,7 @@
         function toggleAdminPassword() {
             const loginRole = document.getElementById('login-role');
             const passwordField = document.getElementById('admin-password-field');
+            const resetLink = document.getElementById('admin-reset-link');
             const errorMsg = document.getElementById('login-error');
             
             if (errorMsg) {
@@ -1910,8 +1943,10 @@
             
             if (loginRole.value === 'admin') {
                 passwordField.style.display = 'block';
+                if (resetLink) resetLink.style.display = 'block';
             } else {
                 passwordField.style.display = 'none';
+                if (resetLink) resetLink.style.display = 'none';
             }
         }
         
@@ -2133,6 +2168,7 @@
             const name = document.getElementById('login-name').value.trim();
             const password = document.getElementById('admin-password').value;
             const errorMsg = document.getElementById('login-error');
+            const loginBtn = document.querySelector('#login-modal button.btn-primary');
             
             // Clear previous errors
             errorMsg.textContent = '';
@@ -2147,12 +2183,30 @@
             
             // Validate admin password
             if (role === 'admin') {
-                const storedPassword = await getAdminPassword();
-                if (password !== storedPassword) {
-                    errorMsg.textContent = 'Incorrect admin password';
+                if (!password) {
+                    errorMsg.textContent = 'Please enter the admin password';
                     errorMsg.style.display = 'block';
                     return;
                 }
+                
+                // Show loading while fetching password from server
+                if (loginBtn) { loginBtn.textContent = 'Verifying...'; loginBtn.disabled = true; }
+                errorMsg.textContent = '⏳ Checking password...';
+                errorMsg.style.color = '#2563eb';
+                errorMsg.style.display = 'block';
+                
+                const storedPassword = await getAdminPassword();
+                
+                if (loginBtn) { loginBtn.textContent = 'Login'; loginBtn.disabled = false; }
+                
+                if (password.trim() !== storedPassword.trim()) {
+                    errorMsg.textContent = 'Incorrect admin password. Try again or use the Reset link below.';
+                    errorMsg.style.color = '#dc2626';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+                
+                errorMsg.style.display = 'none';
             }
             
             // Create user session
