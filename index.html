@@ -305,6 +305,28 @@
 
         .table-container {
             overflow-x: auto;
+            overflow-y: auto;
+            max-height: 65vh;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        /* Sticky floating scrollbar at top */
+        .table-wrapper {
+            position: relative;
+        }
+
+        .table-scroll-top {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 12px;
+            margin-bottom: 2px;
+            border-radius: 4px;
+        }
+
+        .table-scroll-top-inner {
+            height: 1px;
         }
 
         table {
@@ -321,6 +343,11 @@
             color: white;
             border-bottom: 3px solid var(--accent);
             letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            /* Re-apply gradient since sticky can lose background in some browsers */
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
         }
 
         td {
@@ -585,6 +612,88 @@
         </div>
     </div>
 
+    <!-- WhatsApp Share Modal -->
+    <div id="whatsapp-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 1rem;">
+        <div style="background: white; border-radius: 16px; width: 100%; max-width: 520px; margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.4); overflow: hidden;">
+            
+            <!-- Modal Header -->
+            <div style="background: #075E54; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.5rem;">📲</span>
+                    <div>
+                        <div style="color: white; font-weight: 700; font-size: 1.05rem;">Share to WhatsApp</div>
+                        <div style="color: #d4f1d4; font-size: 0.8rem;">Priority actions for your team</div>
+                    </div>
+                </div>
+                <button onclick="closeWhatsAppShare()" style="background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+            </div>
+
+            <!-- Preview Card (screenshot-friendly) -->
+            <div style="padding: 1.25rem;">
+                <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>📸</span> <strong>Screenshot this card</strong> or use the button below to send as text
+                </div>
+                
+                <!-- The actual shareable card -->
+                <div id="wa-card" style="background: #ECE5DD; border-radius: 12px; padding: 1rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+                    
+                    <!-- Card Header -->
+                    <div style="background: #075E54; color: white; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.75rem;">
+                        <div style="font-weight: 700; font-size: 1rem;">🏪 Amaze On — Expiry Tracker</div>
+                        <div id="wa-datetime" style="font-size: 0.75rem; opacity: 0.85; margin-top: 0.2rem;"></div>
+                    </div>
+
+                    <!-- Already Expired -->
+                    <div id="wa-expired-section" style="display:none; margin-bottom: 0.75rem;">
+                        <div style="background: #c1121f; color: white; border-radius: 6px 6px 0 0; padding: 0.5rem 0.75rem; font-weight: 700; font-size: 0.85rem;">
+                            🚨 ALREADY EXPIRED — Immediate Action
+                        </div>
+                        <div id="wa-expired-list" style="background: white; border-radius: 0 0 6px 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem; line-height: 1.8;"></div>
+                    </div>
+
+                    <!-- Critical (7 days) -->
+                    <div id="wa-critical-section" style="display:none; margin-bottom: 0.75rem;">
+                        <div style="background: #e85d04; color: white; border-radius: 6px 6px 0 0; padding: 0.5rem 0.75rem; font-weight: 700; font-size: 0.85rem;">
+                            ⚠️ CRITICAL — Expiring Within 7 Days
+                        </div>
+                        <div id="wa-critical-list" style="background: white; border-radius: 0 0 6px 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem; line-height: 1.8;"></div>
+                    </div>
+
+                    <!-- In Expiry Area -->
+                    <div id="wa-expiry-section" style="display:none; margin-bottom: 0.75rem;">
+                        <div style="background: #1b4332; color: white; border-radius: 6px 6px 0 0; padding: 0.5rem 0.75rem; font-weight: 700; font-size: 0.85rem;">
+                            📦 IN EXPIRY AREA — Pending Return
+                        </div>
+                        <div id="wa-expiry-list" style="background: white; border-radius: 0 0 6px 6px; padding: 0.5rem 0.75rem; font-size: 0.8rem; line-height: 1.8;"></div>
+                    </div>
+
+                    <!-- All clear -->
+                    <div id="wa-allclear" style="display:none; background: #d1fae5; border-radius: 8px; padding: 0.75rem; text-align: center; color: #1b4332; font-weight: 700; font-size: 0.9rem;">
+                        ✅ All Clear! No Priority Actions Today.
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="text-align: center; font-size: 0.7rem; color: #666; margin-top: 0.5rem;">
+                        Reply to this message with updates 👆
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
+                    <a id="wa-send-btn" href="#" target="_blank" style="flex: 1; background: #25D366; color: white; border: none; border-radius: 8px; padding: 0.85rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-width: 160px;">
+                        📲 Send as Text to WhatsApp
+                    </a>
+                    <button onclick="copyWAText()" style="flex: 1; background: #f0fdf4; color: #1b4332; border: 2px solid #2d6a4f; border-radius: 8px; padding: 0.85rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-width: 160px;" id="copy-btn">
+                        📋 Copy Text
+                    </button>
+                </div>
+                <div style="font-size: 0.75rem; color: #888; text-align: center; margin-top: 0.5rem;">
+                    💡 Tip: Screenshot the green card above for a visual share, or use the buttons for text
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settings-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center;">
         <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
@@ -628,6 +737,7 @@
                     <span id="sync-status" style="margin-left: 1rem; font-size: 0.8rem; opacity: 0.8;"></span>
                 </div>
                 <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button onclick="openWhatsAppShare()" class="btn" style="background: #25D366; color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Share priority actions to WhatsApp">📲 WhatsApp</button>
                     <button onclick="manualRefresh()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Manually sync with server">🔄 Refresh</button>
                     <button onclick="openSettings()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" id="settings-btn">⚙️ Settings</button>
                     <button onclick="handleLogout()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
@@ -1692,6 +1802,9 @@
             setupFilterAutocomplete('already-expired-brand-filter', 'already-expired-brand-filter-suggestions', updateAlreadyExpiredView);
             setupFilterAutocomplete('expiry-area-brand-filter', 'expiry-area-brand-filter-suggestions', updateExpiryAreaView);
             setupFilterAutocomplete('sold-brand-filter', 'sold-brand-filter-suggestions', updateSoldView);
+
+            // Setup dual scrollbars (top + bottom) for all wide tables
+            setupDualScrollbars();
         });
         
         // Toggle admin password field visibility
@@ -1741,7 +1854,152 @@
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
         }
-        
+
+        // ===== WHATSAPP SHARE FUNCTIONS =====
+
+        let waTextCache = '';
+
+        function openWhatsAppShare() {
+            if (currentUser.role !== 'admin') {
+                alert('Only admins can share priority actions.');
+                return;
+            }
+
+            const modal = document.getElementById('whatsapp-modal');
+            modal.style.display = 'flex';
+
+            // Set date/time on card
+            const now = new Date();
+            document.getElementById('wa-datetime').textContent =
+                now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
+                '  •  ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+            // Gather priority data
+            const expired = items.filter(i => i.status === 'upcoming' && daysUntilExpiry(i.expiryDate) < 0)
+                                  .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+            const critical = items.filter(i => i.status === 'upcoming' && daysUntilExpiry(i.expiryDate) >= 0 && daysUntilExpiry(i.expiryDate) <= 7)
+                                   .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+            const expiryArea = items.filter(i => i.status === 'expiry-area')
+                                    .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+            const hasAnything = expired.length > 0 || critical.length > 0 || expiryArea.length > 0;
+
+            // Build visual card sections
+            const expiredSection = document.getElementById('wa-expired-section');
+            const criticalSection = document.getElementById('wa-critical-section');
+            const expirySection = document.getElementById('wa-expiry-section');
+            const allClear = document.getElementById('wa-allclear');
+
+            // Expired
+            if (expired.length > 0) {
+                expiredSection.style.display = 'block';
+                document.getElementById('wa-expired-list').innerHTML = expired.map(i =>
+                    `<div style="padding: 0.2rem 0; border-bottom: 1px solid #f5f5f5;">` +
+                    `<b>${i.brand}</b> — ${i.itemName || ''}` +
+                    `<span style="float:right; color:#c1121f; font-weight:700;">${Math.abs(daysUntilExpiry(i.expiryDate))}d ago</span>` +
+                    `</div>`
+                ).join('');
+            } else {
+                expiredSection.style.display = 'none';
+            }
+
+            // Critical
+            if (critical.length > 0) {
+                criticalSection.style.display = 'block';
+                document.getElementById('wa-critical-list').innerHTML = critical.map(i => {
+                    const d = daysUntilExpiry(i.expiryDate);
+                    return `<div style="padding: 0.2rem 0; border-bottom: 1px solid #f5f5f5;">` +
+                        `<b>${i.brand}</b> — ${i.itemName || ''}` +
+                        `<span style="float:right; color:#e85d04; font-weight:700;">${d === 0 ? 'TODAY' : d + 'd left'}</span>` +
+                        `</div>`;
+                }).join('');
+            } else {
+                criticalSection.style.display = 'none';
+            }
+
+            // Expiry Area
+            if (expiryArea.length > 0) {
+                expirySection.style.display = 'block';
+                document.getElementById('wa-expiry-list').innerHTML = expiryArea.map(i =>
+                    `<div style="padding: 0.2rem 0; border-bottom: 1px solid #f5f5f5;">` +
+                    `<b>${i.brand}</b> — ${i.itemName || ''}` +
+                    `<span style="float:right; color:#1b4332;">Moved ${i.movedDate ? new Date(i.movedDate).toLocaleDateString('en-IN', {day:'numeric', month:'short'}) : '-'}</span>` +
+                    `</div>`
+                ).join('');
+            } else {
+                expirySection.style.display = 'none';
+            }
+
+            // All clear
+            allClear.style.display = hasAnything ? 'none' : 'block';
+
+            // Build WhatsApp text message
+            const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            let msg = `🏪 *Amaze On — Expiry Tracker*\n📅 ${dateStr}  •  ${timeStr}\n\n`;
+
+            if (!hasAnything) {
+                msg += `✅ *All Clear!* No priority actions today.\n`;
+            } else {
+                if (expired.length > 0) {
+                    msg += `🚨 *ALREADY EXPIRED (${expired.length} items)*\n`;
+                    msg += expired.map(i => `  • ${i.brand} — ${i.itemName || ''} _(${Math.abs(daysUntilExpiry(i.expiryDate))} days ago)_`).join('\n');
+                    msg += '\n\n';
+                }
+                if (critical.length > 0) {
+                    msg += `⚠️ *CRITICAL — Within 7 Days (${critical.length} items)*\n`;
+                    msg += critical.map(i => {
+                        const d = daysUntilExpiry(i.expiryDate);
+                        return `  • ${i.brand} — ${i.itemName || ''} _(${d === 0 ? 'Expires TODAY' : d + ' days left'})_`;
+                    }).join('\n');
+                    msg += '\n\n';
+                }
+                if (expiryArea.length > 0) {
+                    msg += `📦 *IN EXPIRY AREA — Pending Return (${expiryArea.length} items)*\n`;
+                    msg += expiryArea.map(i => `  • ${i.brand} — ${i.itemName || ''}`).join('\n');
+                    msg += '\n\n';
+                }
+                msg += `_Please update the admin with any actions taken._`;
+            }
+
+            waTextCache = msg;
+
+            // Set WhatsApp link
+            document.getElementById('wa-send-btn').href =
+                'https://wa.me/?text=' + encodeURIComponent(msg);
+        }
+
+        function closeWhatsAppShare() {
+            document.getElementById('whatsapp-modal').style.display = 'none';
+        }
+
+        function copyWAText() {
+            if (!waTextCache) return;
+            navigator.clipboard.writeText(waTextCache).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => { btn.innerHTML = '📋 Copy Text'; }, 2000);
+            }).catch(() => {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = waTextCache;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                const btn = document.getElementById('copy-btn');
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => { btn.innerHTML = '📋 Copy Text'; }, 2000);
+            });
+        }
+
+        // Close WhatsApp modal on backdrop click
+        document.getElementById('whatsapp-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeWhatsAppShare();
+        });
+
         // Change admin password
         async function changeAdminPassword() {
             const currentPassword = document.getElementById('current-admin-password').value;
@@ -2242,6 +2500,9 @@
             
             event.target.classList.add('active');
             document.getElementById(tab + '-tab').classList.add('active');
+            
+            // Apply dual scrollbars to newly visible tab's tables
+            setTimeout(setupDualScrollbars, 50);
             
             // Refresh data when switching tabs for real-time updates
             await autoRefreshData();
@@ -2962,6 +3223,59 @@
 
         // Update all views
         // OPTIMIZED: Update all views (use sparingly!)
+        // ===== DUAL SCROLLBAR SETUP =====
+        // Adds a mirrored scrollbar at the TOP of every table-container
+        // so users don't have to scroll all the way down to scroll horizontally.
+        // Also ensures sticky header works inside the bounded container.
+        function setupDualScrollbars() {
+            document.querySelectorAll('.table-container').forEach(container => {
+                // Skip if already wrapped
+                if (container.parentElement.classList.contains('table-wrapper')) return;
+
+                // Create wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-wrapper';
+                container.parentNode.insertBefore(wrapper, container);
+                wrapper.appendChild(container);
+
+                // Create top scrollbar
+                const topBar = document.createElement('div');
+                topBar.className = 'table-scroll-top';
+                const topBarInner = document.createElement('div');
+                topBarInner.className = 'table-scroll-top-inner';
+                topBar.appendChild(topBarInner);
+                wrapper.insertBefore(topBar, container);
+
+                // Sync widths
+                function syncWidth() {
+                    topBarInner.style.width = container.scrollWidth + 'px';
+                }
+                syncWidth();
+
+                // Sync scroll positions
+                let syncingFromTop = false;
+                let syncingFromBottom = false;
+
+                topBar.addEventListener('scroll', () => {
+                    if (syncingFromBottom) return;
+                    syncingFromTop = true;
+                    container.scrollLeft = topBar.scrollLeft;
+                    syncingFromTop = false;
+                });
+
+                container.addEventListener('scroll', () => {
+                    if (syncingFromTop) return;
+                    syncingFromBottom = true;
+                    topBar.scrollLeft = container.scrollLeft;
+                    syncingFromBottom = false;
+                });
+
+                // Re-sync width when content changes (e.g. after data loads)
+                new MutationObserver(syncWidth).observe(container, { childList: true, subtree: true });
+            });
+        }
+
+        // Re-apply dual scrollbars after any view update (MutationObserver handles existing, this catches new tabs)
         function updateAllViews() {
             updateMasterDataView();
             updateUpcomingView();
@@ -2974,14 +3288,12 @@
             updateBrandsList();
             updateStats();
             updateAlerts();
+            setTimeout(setupDualScrollbars, 50);
         }
         
         // OPTIMIZED: Update only brand-related views (for brand additions/deletions)
-        // OPTIMIZED: Update only brand-related views (for brand additions/deletions)
         function updateBrandViews() {
             updateBrandsList();
-            // Note: Brand autocomplete reads directly from brands array via getSortedBrands()
-            // so no explicit update needed - invalidateBrandCache() is called before this
         }
         
         // OPTIMIZED: Update only item-related views (for item additions/edits)
@@ -2996,6 +3308,7 @@
             updateReportsView();
             updateStats();
             updateAlerts();
+            setTimeout(setupDualScrollbars, 50);
         }
 
         // Change trend view
