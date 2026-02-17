@@ -645,6 +645,7 @@
             <button class="tab" onclick="switchTab('critical')">Critical (7 Days)</button>
             <button class="tab" onclick="switchTab('already-expired')">Already Expired</button>
             <button class="tab" onclick="switchTab('expiry-area')">Expiry Area</button>
+            <button class="tab" onclick="switchTab('sold')">✅ Sold Items</button>
             <button class="tab" onclick="switchTab('analytics')">Analytics</button>
             <button class="tab" onclick="switchTab('reports')">Reports</button>
         </div>
@@ -776,6 +777,10 @@
                     <h3>Returned Items</h3>
                     <div class="value" id="returned-items">0</div>
                 </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #1b4332, #2d6a4f);">
+                    <h3>Sold Items</h3>
+                    <div class="value" id="sold-items-count">0</div>
+                </div>
             </div>
 
             <div class="card">
@@ -788,6 +793,7 @@
                             <option value="upcoming">On Shelf</option>
                             <option value="expiry-area">In Expiry Area</option>
                             <option value="returned">Returned</option>
+                            <option value="sold">Sold</option>
                         </select>
                     </div>
                     <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
@@ -816,6 +822,9 @@
                                 <th>Moved Date</th>
                                 <th>Returned By</th>
                                 <th>Returned Date</th>
+                                <th>Sold By</th>
+                                <th>Sold Date</th>
+                                <th>Days Left at Sale</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -862,9 +871,77 @@
                                 <th>Days Left</th>
                                 <th>Added By</th>
                                 <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="upcoming-items"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sold Items Tab -->
+        <div id="sold-tab" class="tab-content">
+            <div class="stats">
+                <div class="stat-card" style="background: linear-gradient(135deg, #1b4332, #2d6a4f);">
+                    <h3>Total Sold</h3>
+                    <div class="value" id="sold-total-count">0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #2d6a4f, #40916c);">
+                    <h3>Total Value (MRP × Qty)</h3>
+                    <div class="value" id="sold-total-value">₹0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #40916c, #52b788);">
+                    <h3>Brands Sold</h3>
+                    <div class="value" id="sold-total-brands">0</div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>✅ Sold Items</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Items that were sold before expiry (not moved to Expiry Area).</p>
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <input type="text" id="sold-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
+                        <div id="sold-brand-filter-suggestions" class="brand-suggestions"></div>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Sold Date From</label>
+                        <input type="date" id="sold-date-from" onchange="updateSoldView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Sold Date To</label>
+                        <input type="date" id="sold-date-to" onchange="updateSoldView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Search Item</label>
+                        <input type="text" id="sold-search-filter" placeholder="Search by item name..." oninput="updateSoldView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Sort By</label>
+                        <select id="sold-sort-filter" onchange="updateSoldView()">
+                            <option value="sold-desc">Sold Date (Newest First)</option>
+                            <option value="sold-asc">Sold Date (Oldest First)</option>
+                            <option value="expiry-asc">Expiry Date (Soonest)</option>
+                            <option value="brand">Brand (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Item Name</th>
+                                <th>MRP</th>
+                                <th>Quantity</th>
+                                <th>Expiry Date</th>
+                                <th>Days Left at Sale</th>
+                                <th>Sold By</th>
+                                <th>Sold Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sold-items-list"></tbody>
                     </table>
                 </div>
             </div>
@@ -1614,6 +1691,7 @@
             setupFilterAutocomplete('critical-brand-filter', 'critical-brand-filter-suggestions', updateCriticalView);
             setupFilterAutocomplete('already-expired-brand-filter', 'already-expired-brand-filter-suggestions', updateAlreadyExpiredView);
             setupFilterAutocomplete('expiry-area-brand-filter', 'expiry-area-brand-filter-suggestions', updateExpiryAreaView);
+            setupFilterAutocomplete('sold-brand-filter', 'sold-brand-filter-suggestions', updateSoldView);
         });
         
         // Toggle admin password field visibility
@@ -2595,13 +2673,13 @@
             const item = items.find(i => i.id === id);
             if (!item) return;
             
-            const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n\nEnter new status:`);
+            const newStatus = prompt(`Current status: ${item.status}\n\nReset to:\n- "upcoming" for On Shelf\n- "expiry-area" for Expiry Area\n- "returned" for Returned\n- "sold" for Sold\n\nEnter new status:`);
             
             if (!newStatus) return;
             
-            const validStatuses = ['upcoming', 'expiry-area', 'returned'];
+            const validStatuses = ['upcoming', 'expiry-area', 'returned', 'sold'];
             if (!validStatuses.includes(newStatus)) {
-                alert('Invalid status. Must be: upcoming, expiry-area, or returned');
+                alert('Invalid status. Must be: upcoming, expiry-area, returned, or sold');
                 return;
             }
             
@@ -2769,6 +2847,119 @@
             }
         }
 
+        // Mark as SOLD - before expiry (not moved to expiry area)
+        async function markAsSold(id) {
+            try {
+                const item = items.find(i => i.id === id || String(i.id) === String(id));
+                if (!item) {
+                    alert('Error: Item not found. Refreshing...');
+                    await autoRefreshData();
+                    return;
+                }
+
+                if (item.status !== 'upcoming') {
+                    alert(`This item is in "${item.status}" status. Only "On Shelf" items can be marked as sold.`);
+                    return;
+                }
+
+                const days = daysUntilExpiry(item.expiryDate);
+
+                const personName = prompt(
+                    `Mark as SOLD?\n\n` +
+                    `Brand: ${item.brand}\n` +
+                    `Item: ${item.itemName || ''}\n` +
+                    `MRP: ₹${item.mrp} | Qty: ${item.quantity}\n` +
+                    `Expiry: ${new Date(item.expiryDate).toLocaleDateString()} (${days} days left)\n\n` +
+                    `Enter name of person recording this sale:`,
+                    currentUser.name
+                );
+
+                if (!personName || personName.trim() === '') {
+                    alert('Action cancelled - name is required');
+                    return;
+                }
+
+                item.status = 'sold';
+                item.soldBy = personName.trim();
+                item.soldDate = new Date().toISOString();
+                item.daysRemainingAtSale = days;
+
+                updateItemViews();
+                alert(`✅ Item marked as sold!\n\n${item.brand} - ${item.itemName || ''}`);
+
+                saveItems().catch(error => {
+                    console.error('Background save failed:', error);
+                    alert('Warning: Item marked in app but may not be saved to server. Please check connection.');
+                });
+
+            } catch (error) {
+                console.error('Error marking as sold:', error);
+                alert('Failed to mark as sold. Error: ' + error.message);
+            }
+        }
+
+        // Update Sold Items view
+        function updateSoldView() {
+            const tbody = document.getElementById('sold-items-list');
+            if (!tbody) return;
+
+            const brandFilterInput = document.getElementById('sold-brand-filter');
+            const brandFilter = brandFilterInput ? brandFilterInput.value.trim() : '';
+            const searchFilter = (document.getElementById('sold-search-filter')?.value || '').toLowerCase();
+            const sortFilter = document.getElementById('sold-sort-filter')?.value || 'sold-desc';
+            const dateFrom = document.getElementById('sold-date-from')?.value || '';
+            const dateTo = document.getElementById('sold-date-to')?.value || '';
+
+            let soldItems = items.filter(i => i.status === 'sold');
+
+            // Update stat cards (always from all sold, not filtered)
+            const soldCountEl = document.getElementById('sold-total-count');
+            const soldValueEl = document.getElementById('sold-total-value');
+            const soldBrandsEl = document.getElementById('sold-total-brands');
+            if (soldCountEl) soldCountEl.textContent = soldItems.length;
+            if (soldValueEl) soldValueEl.textContent = '₹' + soldItems.reduce((sum, i) => sum + (parseFloat(i.mrp) * parseFloat(i.quantity) || 0), 0).toLocaleString();
+            if (soldBrandsEl) soldBrandsEl.textContent = new Set(soldItems.map(i => i.brand)).size;
+
+            // Apply filters
+            if (brandFilter) soldItems = soldItems.filter(i => i.brand === brandFilter);
+            if (searchFilter) soldItems = soldItems.filter(i =>
+                (i.itemName || '').toLowerCase().includes(searchFilter) || i.brand.toLowerCase().includes(searchFilter)
+            );
+            if (dateFrom) soldItems = soldItems.filter(i => i.soldDate && i.soldDate.slice(0, 10) >= dateFrom);
+            if (dateTo) soldItems = soldItems.filter(i => i.soldDate && i.soldDate.slice(0, 10) <= dateTo);
+
+            // Sort
+            soldItems.sort((a, b) => {
+                if (sortFilter === 'sold-desc') return new Date(b.soldDate) - new Date(a.soldDate);
+                if (sortFilter === 'sold-asc') return new Date(a.soldDate) - new Date(b.soldDate);
+                if (sortFilter === 'expiry-asc') return new Date(a.expiryDate) - new Date(b.expiryDate);
+                if (sortFilter === 'brand') return a.brand.localeCompare(b.brand);
+                return 0;
+            });
+
+            if (soldItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div>No sold items yet</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = soldItems.map(item => {
+                const daysLeft = item.daysRemainingAtSale !== undefined ? item.daysRemainingAtSale : '-';
+                const badgeClass = typeof daysLeft === 'number' && daysLeft <= 7 ? 'badge-warning' : 'badge-success';
+                return `
+                    <tr>
+                        <td>${item.brand}</td>
+                        <td>${item.itemName || '-'}</td>
+                        <td>₹${item.mrp}</td>
+                        <td>${item.quantity}</td>
+                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td><span class="badge ${badgeClass}">${daysLeft} days</span></td>
+                        <td>${item.soldBy || '-'}</td>
+                        <td>${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
         // Update all views
         // OPTIMIZED: Update all views (use sparingly!)
         function updateAllViews() {
@@ -2777,6 +2968,7 @@
             updateCriticalView();
             updateAlreadyExpiredView();
             updateExpiryAreaView();
+            updateSoldView();
             updateAnalyticsView();
             updateReportsView();
             updateBrandsList();
@@ -2799,6 +2991,7 @@
             updateCriticalView();
             updateAlreadyExpiredView();
             updateExpiryAreaView();
+            updateSoldView();
             updateAnalyticsView();
             updateReportsView();
             updateStats();
@@ -3272,11 +3465,12 @@
             
             // Update stats
             document.getElementById('total-items-tracked').textContent = items.length;
-            document.getElementById('active-items').textContent = items.filter(i => i.status !== 'returned').length;
+            document.getElementById('active-items').textContent = items.filter(i => i.status !== 'returned' && i.status !== 'sold').length;
             document.getElementById('returned-items').textContent = items.filter(i => i.status === 'returned').length;
+            document.getElementById('sold-items-count').textContent = items.filter(i => i.status === 'sold').length;
             
             if (filteredItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-state"><div>No items found</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="16" class="empty-state"><div>No items found</div></td></tr>';
                 return;
             }
             
@@ -3287,13 +3481,15 @@
             
             tbody.innerHTML = sortedItems.map(item => {
                 const statusBadge = item.status === 'upcoming' ? 'badge-warning' : 
-                                   item.status === 'expiry-area' ? 'badge-danger' : 'badge-success';
+                                   item.status === 'expiry-area' ? 'badge-danger' :
+                                   item.status === 'sold' ? 'badge-success' : 'badge-success';
                 const statusText = item.status === 'upcoming' ? 'On Shelf' : 
-                                  item.status === 'expiry-area' ? 'Expiry Area' : 'Returned';
+                                  item.status === 'expiry-area' ? 'Expiry Area' : 
+                                  item.status === 'sold' ? '✅ Sold' : 'Returned';
                 
                 // Show appropriate action buttons
                 let actionButton = '';
-                if (item.status !== 'returned') {
+                if (item.status !== 'returned' && item.status !== 'sold') {
                     if (currentUser.role === 'admin') {
                         actionButton = `
                             <button class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; margin-right: 0.5rem;" onclick="editItem('${item.id}')">Edit</button>
@@ -3320,6 +3516,9 @@
                         <td>${item.movedDate ? new Date(item.movedDate).toLocaleDateString() : '-'}</td>
                         <td>${item.returnedBy || '-'}</td>
                         <td>${item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : '-'}</td>
+                        <td>${item.soldBy || '-'}</td>
+                        <td>${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
+                        <td>${item.daysRemainingAtSale !== undefined ? item.daysRemainingAtSale + ' days' : '-'}</td>
                         <td>${actionButton}</td>
                     </tr>
                 `;
@@ -3334,7 +3533,7 @@
             }
             
             const headers = ['Brand', 'Item Name', 'MRP', 'Quantity', 'Expiry Date', 'Status', 
-                           'Added By', 'Added Date', 'Moved By', 'Moved Date', 'Returned By', 'Returned Date'];
+                           'Added By', 'Added Date', 'Moved By', 'Moved Date', 'Returned By', 'Returned Date', 'Sold By', 'Sold Date', 'Days Left at Sale'];
             
             const rows = items.map(item => [
                 item.brand,
@@ -3342,13 +3541,16 @@
                 item.mrp,
                 item.quantity,
                 item.expiryDate,
-                item.status === 'upcoming' ? 'On Shelf' : item.status === 'expiry-area' ? 'Expiry Area' : 'Returned',
+                item.status === 'upcoming' ? 'On Shelf' : item.status === 'expiry-area' ? 'Expiry Area' : item.status === 'sold' ? 'Sold' : 'Returned',
                 item.addedBy,
                 new Date(item.addedDate).toLocaleDateString(),
                 item.movedBy || '',
                 item.movedDate ? new Date(item.movedDate).toLocaleDateString() : '',
                 item.returnedBy || '',
-                item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : ''
+                item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : '',
+                item.soldBy || '',
+                item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '',
+                item.daysRemainingAtSale !== undefined ? item.daysRemainingAtSale : ''
             ]);
             
             const csv = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
@@ -3540,13 +3742,14 @@
             });
 
             if (upcomingItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div>No upcoming expiries</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div>No upcoming expiries</div></td></tr>';
                 return;
             }
 
             tbody.innerHTML = upcomingItems.map(item => {
                 const days = daysUntilExpiry(item.expiryDate);
                 const badge = days <= 7 ? 'badge-danger' : 'badge-warning';
+                const itemId = String(item.id);
                 return `
                     <tr>
                         <td>${item.brand}</td>
@@ -3557,6 +3760,11 @@
                         <td><span class="badge ${badge}">${days} days</span></td>
                         <td>${item.addedBy}</td>
                         <td><span class="badge badge-warning">On Shelf</span></td>
+                        <td>
+                            <button class="btn btn-success" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap;" onclick="markAsSold('${itemId}')">
+                                ✅ Mark as Sold
+                            </button>
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -3629,9 +3837,14 @@
                         <td><span class="badge badge-danger">${days} days</span></td>
                         <td>${item.addedBy}</td>
                         <td>
-                            <button class="btn btn-danger" onclick="moveToExpiryArea('${itemId}')">
-                                Move to Expiry Area
-                            </button>
+                            <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                                <button class="btn btn-danger" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap;" onclick="moveToExpiryArea('${itemId}')">
+                                    Move to Expiry Area
+                                </button>
+                                <button class="btn btn-success" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap;" onclick="markAsSold('${itemId}')">
+                                    ✅ Mark as Sold
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
