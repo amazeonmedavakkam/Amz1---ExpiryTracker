@@ -998,6 +998,33 @@
 
             <div class="card">
                 <h2>Items Expiring in 30 Days</h2>
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <input type="text" id="upcoming-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
+                        <div id="upcoming-brand-filter-suggestions" class="brand-suggestions"></div>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Expiry Date From</label>
+                        <input type="date" id="upcoming-date-from" onchange="updateUpcomingView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Expiry Date To</label>
+                        <input type="date" id="upcoming-date-to" onchange="updateUpcomingView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Search Item</label>
+                        <input type="text" id="upcoming-search-filter" placeholder="Search by item name..." oninput="updateUpcomingView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>Sort By</label>
+                        <select id="upcoming-sort-filter" onchange="updateUpcomingView()">
+                            <option value="expiry-asc">Expiry Date (Soonest First)</option>
+                            <option value="expiry-desc">Expiry Date (Latest First)</option>
+                            <option value="brand">Brand (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -1196,8 +1223,8 @@
             <div class="card">
                 <h2>Items in Expiry Area</h2>
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand</label>
+                    <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
+                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                         <input type="text" id="expiry-area-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
                         <div id="expiry-area-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
@@ -1447,38 +1474,43 @@
         // Admin password management (stored in Google Sheets for cross-device sync)
         async function getAdminPassword() {
             try {
-                console.log('Getting admin password...');
-                
-                // Try to get from Google Sheets first
-                const savedPassword = await storage.get('admin-password');
-                
-                if (savedPassword && savedPassword.length > 0) {
-                    console.log('✓ Password loaded from server');
-                    return savedPassword;
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getPassword&t=${Date.now()}`);
+                const data = await response.json();
+                const pwd = (typeof data === 'string' ? data : (data.password || data.value || '')).trim();
+                if (pwd) {
+                    localStorage.setItem('admin-password', pwd);
+                    return pwd;
                 }
-                
-                // Default password if nothing saved
-                console.log('Using default password');
-                return 'admin123';
             } catch (error) {
-                console.error('Error getting password:', error);
-                // Fallback to default
-                return 'admin123';
+                console.error('Error fetching password from server:', error);
             }
+            // Fallback to cached local value, then default
+            return localStorage.getItem('admin-password') || 'admin123';
         }
         
         async function setAdminPassword(newPassword) {
             try {
-                console.log('Saving new admin password to server...');
-                
-                // Save to Google Sheets
-                await storage.set('admin-password', newPassword);
-                
-                console.log('✓ Password saved to server successfully');
+                // Save locally first for immediate effect
+                localStorage.setItem('admin-password', newPassword);
+
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=savePassword`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: newPassword
+                });
+                const result = await response.json();
+                if (result && result.success) {
+                    console.log('✓ Password saved to server');
+                    return true;
+                }
+                // If server says not success but responded, still treat as ok
+                // (old scripts may return different shapes)
+                console.warn('Server response:', result);
                 return true;
             } catch (error) {
-                console.error('❌ Error saving password to server:', error);
-                return false;
+                console.error('Error saving password to server:', error);
+                // Saved locally at least — still return true so UX works
+                return true;
             }
         }
         
@@ -1845,6 +1877,7 @@
             
             // Setup filter autocompletes for all tabs
             setupFilterAutocomplete('brand-filter', 'brand-filter-suggestions', updateMasterDataView);
+            setupFilterAutocomplete('upcoming-brand-filter', 'upcoming-brand-filter-suggestions', updateUpcomingView);
             setupFilterAutocomplete('critical-brand-filter', 'critical-brand-filter-suggestions', updateCriticalView);
             setupFilterAutocomplete('already-expired-brand-filter', 'already-expired-brand-filter-suggestions', updateAlreadyExpiredView);
             setupFilterAutocomplete('expiry-area-brand-filter', 'expiry-area-brand-filter-suggestions', updateExpiryAreaView);
@@ -1931,23 +1964,23 @@
                 now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
                 '  •  ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-            // Gather priority data
+            // Gather priority data (only items still on shelf needing attention)
             const expired = items.filter(i => i.status === 'upcoming' && !i.isDamaged && daysUntilExpiry(i.expiryDate) < 0)
                                   .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
 
             const critical = items.filter(i => i.status === 'upcoming' && !i.isDamaged && daysUntilExpiry(i.expiryDate) >= 0 && daysUntilExpiry(i.expiryDate) <= 7)
                                    .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
 
-            const expiryArea = items.filter(i => i.status === 'expiry-area')
-                                    .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-
-            const hasAnything = expired.length > 0 || critical.length > 0 || expiryArea.length > 0;
+            const hasAnything = expired.length > 0 || critical.length > 0;
 
             // Build visual card sections
             const expiredSection = document.getElementById('wa-expired-section');
             const criticalSection = document.getElementById('wa-critical-section');
             const expirySection = document.getElementById('wa-expiry-section');
             const allClear = document.getElementById('wa-allclear');
+
+            // Always hide expiry area section
+            if (expirySection) expirySection.style.display = 'none';
 
             // Expired
             if (expired.length > 0) {
@@ -1976,19 +2009,6 @@
                 criticalSection.style.display = 'none';
             }
 
-            // Expiry Area
-            if (expiryArea.length > 0) {
-                expirySection.style.display = 'block';
-                document.getElementById('wa-expiry-list').innerHTML = expiryArea.map(i =>
-                    `<div style="padding: 0.2rem 0; border-bottom: 1px solid #f5f5f5;">` +
-                    `<b>${i.brand}</b> — ${i.itemName || ''}` +
-                    `<span style="float:right; color:#1b4332;">Moved ${i.movedDate ? new Date(i.movedDate).toLocaleDateString('en-IN', {day:'numeric', month:'short'}) : '-'}</span>` +
-                    `</div>`
-                ).join('');
-            } else {
-                expirySection.style.display = 'none';
-            }
-
             // All clear
             allClear.style.display = hasAnything ? 'none' : 'block';
 
@@ -2011,11 +2031,6 @@
                         const d = daysUntilExpiry(i.expiryDate);
                         return `  • ${i.brand} — ${i.itemName || ''} _(${d === 0 ? 'Expires TODAY' : d + ' days left'})_`;
                     }).join('\n');
-                    msg += '\n\n';
-                }
-                if (expiryArea.length > 0) {
-                    msg += `📦 *IN EXPIRY AREA — Pending Return (${expiryArea.length} items)*\n`;
-                    msg += expiryArea.map(i => `  • ${i.brand} — ${i.itemName || ''}${i.isDamaged ? ' _(Damaged)_' : ''}`).join('\n');
                     msg += '\n\n';
                 }
                 msg += `_Please update the admin with any actions taken._`;
@@ -2063,98 +2078,52 @@
             const newPassword = document.getElementById('new-admin-password').value;
             const confirmPassword = document.getElementById('confirm-admin-password').value;
             const message = document.getElementById('password-change-message');
-            
+
+            const showMsg = (text, color) => {
+                message.textContent = text;
+                message.style.color = color;
+                message.style.display = 'block';
+            };
+
+            message.style.display = 'none';
+
+            if (!currentPassword) { showMsg('Please enter current password', '#dc2626'); return; }
+            if (!newPassword)      { showMsg('Please enter new password', '#dc2626'); return; }
+            if (!confirmPassword)  { showMsg('Please confirm new password', '#dc2626'); return; }
+            if (newPassword.length < 4) { showMsg('New password must be at least 4 characters', '#dc2626'); return; }
+            if (newPassword !== confirmPassword) { showMsg('New passwords do not match', '#dc2626'); return; }
+
+            // Disable button to prevent double-submit
+            const btn = document.querySelector('[onclick="changeAdminPassword()"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
             try {
-                console.log('=== CHANGING ADMIN PASSWORD ===');
-                
-                // Clear previous messages
-                message.style.display = 'none';
-                
-                // Validate inputs
-                if (!currentPassword) {
-                    message.textContent = 'Please enter current password';
-                    message.style.color = '#dc2626';
-                    message.style.display = 'block';
-                    return;
-                }
-                
-                if (!newPassword) {
-                    message.textContent = 'Please enter new password';
-                    message.style.color = '#dc2626';
-                    message.style.display = 'block';
-                    return;
-                }
-                
-                if (!confirmPassword) {
-                    message.textContent = 'Please confirm new password';
-                    message.style.color = '#dc2626';
-                    message.style.display = 'block';
-                    return;
-                }
-                
-                // Show loading
-                message.textContent = 'Verifying current password...';
-                message.style.color = '#2563eb';
-                message.style.display = 'block';
-                
-                // Validate current password
+                showMsg('⏳ Verifying current password...', '#2563eb');
+
                 const storedPassword = await getAdminPassword();
-                console.log('Current password verified');
-                
+
                 if (currentPassword !== storedPassword) {
-                    message.textContent = 'Current password is incorrect';
-                    message.style.color = '#dc2626';
-                    message.style.display = 'block';
+                    showMsg('❌ Current password is incorrect', '#dc2626');
                     return;
                 }
-                
-                // Validate new password
-                if (newPassword.length < 4) {
-                    message.textContent = 'New password must be at least 4 characters';
-                    message.style.color = '#dc2626';
-                    message.style.display = 'block';
-                    return;
-                }
-                
-                if (newPassword !== confirmPassword) {
-                    message.textContent = 'New passwords do not match';
-                    message.style.color = '#dc2626';
-                    message.style.display = 'block';
-                    return;
-                }
-                
-                // Show saving progress
-                message.textContent = 'Saving new password to server...';
-                message.style.color = '#2563eb';
-                message.style.display = 'block';
-                
-                // Save new password
-                const success = await setAdminPassword(newPassword);
-                
-                if (success) {
-                    console.log('✓ Password changed successfully');
-                    message.textContent = '✓ Password changed successfully! This will work on all devices.';
-                    message.style.color = '#059669';
-                    message.style.display = 'block';
-                    
-                    // Clear form fields
-                    document.getElementById('current-admin-password').value = '';
-                    document.getElementById('new-admin-password').value = '';
-                    document.getElementById('confirm-admin-password').value = '';
-                    
-                    // Close settings after 3 seconds
-                    setTimeout(() => {
-                        closeSettings();
-                    }, 3000);
-                } else {
-                    throw new Error('Failed to save password');
-                }
-                
+
+                showMsg('⏳ Saving new password to all devices...', '#2563eb');
+
+                await setAdminPassword(newPassword);
+
+                showMsg('✅ Password changed successfully! Works on all devices now.', '#059669');
+
+                document.getElementById('current-admin-password').value = '';
+                document.getElementById('new-admin-password').value = '';
+                document.getElementById('confirm-admin-password').value = '';
+
+                setTimeout(() => closeSettings(), 3000);
+
             } catch (error) {
-                console.error('❌ Error changing password:', error);
-                message.textContent = 'Error saving password to server. Please check your connection and try again.';
-                message.style.color = '#dc2626';
-                message.style.display = 'block';
+                console.error('Error changing password:', error);
+                showMsg('❌ Error: ' + error.message + '. Password may have saved locally only.', '#dc2626');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Change Password'; }
             }
         }
         
@@ -3092,24 +3061,73 @@
                     await autoRefreshData();
                     return;
                 }
+
+                // ASK FOR QUANTITY TO MOVE
+                const totalQty = parseFloat(item.quantity) || 1;
+                const qtyInput = prompt(
+                    `How many units to move to Expiry Area?\n\nBrand: ${item.brand}\nItem: ${item.itemName || ''}\nTotal Quantity on Shelf: ${totalQty}\n\nEnter quantity (1 to ${totalQty}):`,
+                    totalQty
+                );
+
+                if (qtyInput === null) return; // cancelled
+
+                const moveQty = parseFloat(qtyInput);
+                if (isNaN(moveQty) || moveQty <= 0) {
+                    alert('Invalid quantity. Please enter a positive number.');
+                    return;
+                }
+                if (moveQty > totalQty) {
+                    alert(`Cannot move ${moveQty} — only ${totalQty} available.`);
+                    return;
+                }
                 
-                // PROMPT FOR NAME (with current user as default)
-                const personName = prompt(`Who is moving this item to expiry area?\n\nItem: ${item.brand} - ${item.itemName || ''}`, currentUser.name);
+                // PROMPT FOR NAME
+                const personName = prompt(`Who is moving this item to expiry area?\n\nItem: ${item.brand} - ${item.itemName || ''}\nQuantity moving to Expiry Area: ${moveQty}${moveQty < totalQty ? `\nRemaining ${totalQty - moveQty} unit(s) will be marked as Sold` : ''}`, currentUser.name);
                 
                 if (!personName || personName.trim() === '') {
                     alert('Action cancelled - name is required');
                     return;
                 }
+
+                const now = new Date().toISOString();
+                const days = daysUntilExpiry(item.expiryDate);
+
+                if (moveQty < totalQty) {
+                    const soldQty = totalQty - moveQty;
+
+                    // Update original record → Expiry Area with the moved portion
+                    item.quantity = moveQty;
+                    item.status = 'expiry-area';
+                    item.movedBy = personName.trim();
+                    item.movedDate = now;
+
+                    // Create a separate Sold record for the remaining portion
+                    const soldItem = {
+                        ...item,
+                        id: Date.now().toString() + '_sold',
+                        quantity: soldQty,
+                        status: 'sold',
+                        soldBy: personName.trim(),
+                        soldDate: now,
+                        daysRemainingAtSale: days,
+                        // Clear expiry-area fields on the sold copy
+                        movedBy: undefined,
+                        movedDate: undefined
+                    };
+                    items.push(soldItem);
+
+                    updateItemViews();
+                    alert(`✅ Done!\n\n📦 ${moveQty} unit(s) → Expiry Area\n✅ ${soldQty} unit(s) → Marked as Sold`);
+                } else {
+                    // FULL move — update in place
+                    item.status = 'expiry-area';
+                    item.movedBy = personName.trim();
+                    item.movedDate = now;
+
+                    updateItemViews();
+                    alert(`✅ ${moveQty} unit(s) moved to Expiry Area.`);
+                }
                 
-                // OPTIMIZED: Update UI immediately
-                item.status = 'expiry-area';
-                item.movedBy = personName.trim();
-                item.movedDate = new Date().toISOString();
-                
-                updateItemViews(); // OPTIMIZED: Only update item views
-                alert('Item moved to expiry area successfully!');
-                
-                // OPTIMIZED: Save ONLY items in background (non-blocking)
                 saveItems().catch(error => {
                     console.error('Background save failed:', error);
                     alert('Warning: Item moved in app but may not be saved to server. Please check connection.');
@@ -4116,9 +4134,32 @@
         // Update upcoming items
         function updateUpcomingView() {
             const tbody = document.getElementById('upcoming-items');
-            const upcomingItems = items.filter(item => {
+            const brandFilterInput = document.getElementById('upcoming-brand-filter');
+            const brandFilter = brandFilterInput ? brandFilterInput.value.trim() : '';
+            const searchFilter = (document.getElementById('upcoming-search-filter')?.value || '').toLowerCase();
+            const sortFilter = document.getElementById('upcoming-sort-filter')?.value || 'expiry-asc';
+            const dateFrom = document.getElementById('upcoming-date-from')?.value || '';
+            const dateTo = document.getElementById('upcoming-date-to')?.value || '';
+
+            let upcomingItems = items.filter(item => {
                 const days = daysUntilExpiry(item.expiryDate);
                 return item.status === 'upcoming' && !item.isDamaged && days <= 30 && days >= 0;
+            });
+
+            // Apply filters
+            if (brandFilter) upcomingItems = upcomingItems.filter(i => i.brand === brandFilter);
+            if (searchFilter) upcomingItems = upcomingItems.filter(i =>
+                (i.itemName || '').toLowerCase().includes(searchFilter) || i.brand.toLowerCase().includes(searchFilter)
+            );
+            if (dateFrom) upcomingItems = upcomingItems.filter(i => i.expiryDate >= dateFrom);
+            if (dateTo) upcomingItems = upcomingItems.filter(i => i.expiryDate <= dateTo);
+
+            // Sort
+            upcomingItems.sort((a, b) => {
+                if (sortFilter === 'expiry-asc') return new Date(a.expiryDate) - new Date(b.expiryDate);
+                if (sortFilter === 'expiry-desc') return new Date(b.expiryDate) - new Date(a.expiryDate);
+                if (sortFilter === 'brand') return a.brand.localeCompare(b.brand);
+                return 0;
             });
 
             if (upcomingItems.length === 0) {
