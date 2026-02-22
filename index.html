@@ -600,32 +600,21 @@
     </style>
 </head>
 <body>
-    <!-- Login Modal -->
+    <!-- Name Entry Modal (no password needed) -->
     <div id="login-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
         <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">Amaze On Expiry Tracker</h2>
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <img src="Logo_HD.jpg" alt="Amaze On Logo" style="max-width: 160px; border-radius: 8px; margin-bottom: 1rem;" onerror="this.style.display='none'">
+                <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; color: #1b4332;">Amaze On Expiry Tracker</h2>
+                <p style="color: #52796f; font-size: 0.9rem; margin-top: 0.5rem;">Enter your name to continue</p>
+            </div>
             <div class="form-group">
-                <label>Select Role</label>
-                <select id="login-role" style="width: 100%;" onchange="toggleAdminPassword()">
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
-                </select>
+                <label>Your Name *</label>
+                <input type="text" id="login-name" style="width: 100%;" placeholder="Enter your name" required autofocus
+                    onkeydown="if(event.key==='Enter') handleLogin()">
             </div>
-            <div class="form-group" id="admin-password-field" style="display: none; margin-top: 1rem;">
-                <label>Admin Password</label>
-                <input type="password" id="admin-password" style="width: 100%;" placeholder="Enter admin password">
-            </div>
-            <div class="form-group" style="margin-top: 1rem;">
-                <label>Your Name</label>
-                <input type="text" id="login-name" style="width: 100%;" placeholder="Enter your name" required>
-            </div>
-            <button onclick="handleLogin()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Login</button>
+            <button onclick="handleLogin()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Enter Tracker →</button>
             <p id="login-error" style="color: #dc2626; margin-top: 1rem; text-align: center; display: none;"></p>
-            <div id="admin-reset-link" style="display: none; text-align: center; margin-top: 0.75rem;">
-                <a href="#" onclick="resetPasswordCache(); return false;" style="font-size: 0.85rem; color: #6b7280; text-decoration: underline;">
-                    🔑 Forgot password? Click to reset cache
-                </a>
-            </div>
         </div>
     </div>
 
@@ -711,43 +700,7 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 3rem; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <h2 style="font-family: 'Gill Sans', 'Gill Sans MT', serif; margin-bottom: 1.5rem; text-align: center; color: #1b4332;">⚙️ Settings</h2>
-            
-            <div id="admin-settings" style="display: none;">
-                <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.1rem;">Change Admin Password</h3>
-                <div style="background: #f0fdf4; border-left: 4px solid var(--accent); padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-light);">
-                    ✅ When you change the password here, it syncs to the server so <strong>all devices</strong> (all staff/admin phones and computers using this tracker) will use the new password automatically.<br><br>
-                    📌 <strong>Default password is:</strong> <code style="background: #e8f5e9; padding: 2px 6px; border-radius: 4px; font-size: 0.9rem;">admin123</code>
-                </div>
-                <div class="form-group">
-                    <label>Current Password</label>
-                    <input type="password" id="current-admin-password" style="width: 100%;" placeholder="Enter current password">
-                </div>
-                <div class="form-group" style="margin-top: 1rem;">
-                    <label>New Password</label>
-                    <input type="password" id="new-admin-password" style="width: 100%;" placeholder="Enter new password (min 4 characters)">
-                </div>
-                <div class="form-group" style="margin-top: 1rem;">
-                    <label>Confirm New Password</label>
-                    <input type="password" id="confirm-admin-password" style="width: 100%;" placeholder="Confirm new password">
-                </div>
-                <button onclick="changeAdminPassword()" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Change Password</button>
-                <p id="password-change-message" style="margin-top: 1rem; text-align: center; display: none;"></p>
-                <div style="margin-top: 1rem; padding: 0.75rem; background: #fff7ed; border-radius: 6px; border-left: 4px solid #f97316; font-size: 0.82rem; color: #92400e;">
-                    ⚠️ <strong>Locked out?</strong> Use the <em>"Forgot password?"</em> reset link on the login screen to clear the local cache and restore the default, then change to a new password.
-                </div>
-            </div>
-            
-            <div id="staff-settings">
-                <p style="text-align: center; color: var(--text-light);">Settings are available for admin users only.</p>
-            </div>
-            
-            <button onclick="closeSettings()" class="btn" style="width: 100%; margin-top: 1.5rem; background: #6b7280; color: white;">Close</button>
-        </div>
-    </div>
+    <!-- Settings Modal removed (no longer needed) -->
 
     <div class="header">
         <div class="header-content">
@@ -762,9 +715,7 @@
                 </div>
                 <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                     <button onclick="openWhatsAppShare()" class="btn" style="background: #25D366; color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Share priority actions to WhatsApp">📲 WhatsApp</button>
-                    <button onclick="manualRefresh()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Manually sync with server">🔄 Refresh</button>
-                    <button onclick="openSettings()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" id="settings-btn">⚙️ Settings</button>
-                    <button onclick="handleLogout()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+                    <button onclick="changeName()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Change your name">👤 Change Name</button>
                 </div>
             </div>
         </div>
@@ -1929,67 +1880,11 @@
             }
         }
 
-        // Toggle admin password field visibility
-        function toggleAdminPassword() {
-            const loginRole = document.getElementById('login-role');
-            const passwordField = document.getElementById('admin-password-field');
-            const resetLink = document.getElementById('admin-reset-link');
-            const errorMsg = document.getElementById('login-error');
-            
-            if (errorMsg) {
-                errorMsg.style.display = 'none';
-                errorMsg.textContent = '';
-            }
-            
-            if (loginRole.value === 'admin') {
-                passwordField.style.display = 'block';
-                if (resetLink) resetLink.style.display = 'block';
-            } else {
-                passwordField.style.display = 'none';
-                if (resetLink) resetLink.style.display = 'none';
-            }
-        }
-        
-        // Open settings modal
-        function openSettings() {
-            const modal = document.getElementById('settings-modal');
-            const adminSettings = document.getElementById('admin-settings');
-            const staffSettings = document.getElementById('staff-settings');
-            
-            if (currentUser.role === 'admin') {
-                adminSettings.style.display = 'block';
-                staffSettings.style.display = 'none';
-            } else {
-                adminSettings.style.display = 'none';
-                staffSettings.style.display = 'block';
-            }
-            
-            // Clear form
-            document.getElementById('current-admin-password').value = '';
-            document.getElementById('new-admin-password').value = '';
-            document.getElementById('confirm-admin-password').value = '';
-            const message = document.getElementById('password-change-message');
-            message.style.display = 'none';
-            message.textContent = '';
-            
-            modal.style.display = 'flex';
-        }
-        
-        // Close settings modal
-        function closeSettings() {
-            document.getElementById('settings-modal').style.display = 'none';
-        }
-
         // ===== WHATSAPP SHARE FUNCTIONS =====
 
         let waTextCache = '';
 
         function openWhatsAppShare() {
-            if (currentUser.role !== 'admin') {
-                alert('Only admins can share priority actions.');
-                return;
-            }
-
             const modal = document.getElementById('whatsapp-modal');
             modal.style.display = 'flex';
 
@@ -2107,230 +2002,127 @@
             if (e.target === this) closeWhatsAppShare();
         });
 
-        // Change admin password
-        async function changeAdminPassword() {
-            const currentPassword = document.getElementById('current-admin-password').value;
-            const newPassword = document.getElementById('new-admin-password').value;
-            const confirmPassword = document.getElementById('confirm-admin-password').value;
-            const message = document.getElementById('password-change-message');
-
-            const showMsg = (text, color) => {
-                message.textContent = text;
-                message.style.color = color;
-                message.style.display = 'block';
-            };
-
-            message.style.display = 'none';
-
-            if (!currentPassword) { showMsg('Please enter current password', '#dc2626'); return; }
-            if (!newPassword)      { showMsg('Please enter new password', '#dc2626'); return; }
-            if (!confirmPassword)  { showMsg('Please confirm new password', '#dc2626'); return; }
-            if (newPassword.length < 4) { showMsg('New password must be at least 4 characters', '#dc2626'); return; }
-            if (newPassword !== confirmPassword) { showMsg('New passwords do not match', '#dc2626'); return; }
-
-            // Disable button to prevent double-submit
-            const btn = document.querySelector('[onclick="changeAdminPassword()"]');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
-
-            try {
-                showMsg('⏳ Verifying current password...', '#2563eb');
-
-                const storedPassword = await getAdminPassword();
-
-                if (currentPassword !== storedPassword) {
-                    showMsg('❌ Current password is incorrect', '#dc2626');
-                    return;
-                }
-
-                showMsg('⏳ Saving new password to all devices...', '#2563eb');
-
-                await setAdminPassword(newPassword);
-
-                showMsg('✅ Password changed successfully! Works on all devices now.', '#059669');
-
-                document.getElementById('current-admin-password').value = '';
-                document.getElementById('new-admin-password').value = '';
-                document.getElementById('confirm-admin-password').value = '';
-
-                setTimeout(() => closeSettings(), 3000);
-
-            } catch (error) {
-                console.error('Error changing password:', error);
-                showMsg('❌ Error: ' + error.message + '. Password may have saved locally only.', '#dc2626');
-            } finally {
-                if (btn) { btn.disabled = false; btn.textContent = 'Change Password'; }
-            }
-        }
-        
-        // Handle login
+        // Handle login (no password - just name entry)
         async function handleLogin() {
-            const role = document.getElementById('login-role').value;
             const name = document.getElementById('login-name').value.trim();
-            const password = document.getElementById('admin-password').value;
             const errorMsg = document.getElementById('login-error');
-            const loginBtn = document.querySelector('#login-modal button.btn-primary');
             
-            // Clear previous errors
-            errorMsg.textContent = '';
             errorMsg.style.display = 'none';
             
-            // Validate name
             if (!name) {
-                errorMsg.textContent = 'Please enter your name';
+                errorMsg.textContent = 'Please enter your name to continue.';
                 errorMsg.style.display = 'block';
                 return;
             }
             
-            // Validate admin password
-            if (role === 'admin') {
-                if (!password) {
-                    errorMsg.textContent = 'Please enter the admin password';
-                    errorMsg.style.display = 'block';
-                    return;
-                }
-                
-                // Show loading while fetching password from server
-                if (loginBtn) { loginBtn.textContent = 'Verifying...'; loginBtn.disabled = true; }
-                errorMsg.textContent = '⏳ Checking password...';
-                errorMsg.style.color = '#2563eb';
-                errorMsg.style.display = 'block';
-                
-                const storedPassword = await getAdminPassword();
-                
-                if (loginBtn) { loginBtn.textContent = 'Login'; loginBtn.disabled = false; }
-                
-                if (password.trim() !== storedPassword.trim()) {
-                    errorMsg.textContent = 'Incorrect admin password. Try again or use the Reset link below.';
-                    errorMsg.style.color = '#dc2626';
-                    errorMsg.style.display = 'block';
-                    return;
-                }
-                
-                errorMsg.style.display = 'none';
-            }
-            
-            // Create user session
-            currentUser = {
-                name: name,
-                role: role,
-                loggedIn: true
-            };
-            
-            // Save to localStorage (persists across refreshes)
+            currentUser = { name: name, role: 'admin', loggedIn: true };
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            // Hide login modal
             document.getElementById('login-modal').style.display = 'none';
-            
-            // Update UI
             updateUserInterface();
-            
-            // Pre-fill staff name in forms
-            const staffNameField = document.getElementById('staff-name');
-            if (staffNameField) {
-                staffNameField.value = name;
-                staffNameField.readOnly = true;
-            }
-            
-            // Start auto-refresh
             startAutoRefresh();
-            
-            // Load data
             loadData();
         }
         
-        // Handle logout
-        function handleLogout() {
-            if (confirm('Are you sure you want to logout?')) {
-                stopAutoRefresh();
-                localStorage.removeItem('currentUser');
-                location.reload();
+        // Change name function (replaces logout)
+        function changeName() {
+            const newName = prompt('Enter your name:', currentUser.name || '');
+            if (newName && newName.trim()) {
+                currentUser.name = newName.trim();
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                updateUserInterface();
+                const staffNameField = document.getElementById('staff-name');
+                if (staffNameField) staffNameField.value = currentUser.name;
             }
         }
         
-        // Update UI based on user role
+        // Update UI based on user
         function updateUserInterface() {
             const userInfo = document.getElementById('user-info');
-            userInfo.innerHTML = `<strong>${currentUser.name}</strong> (${currentUser.role === 'admin' ? '👑 Admin' : '👤 Staff'})`;
+            if (userInfo) userInfo.innerHTML = `<strong>${currentUser.name}</strong>`;
             
-            if (currentUser.role === 'staff') {
-                // Hide admin-only tabs
-                const tabs = document.querySelectorAll('.tab');
-                tabs.forEach(tab => {
-                    if (tab.textContent.includes('Master Data') || 
-                        tab.textContent.includes('Analytics') || 
-                        tab.textContent.includes('Brand Master')) {
-                        tab.style.display = 'none';
-                    }
-                });
-                
-                // Hide export button
-                const exportBtn = document.querySelector('[onclick="exportToCSV()"]');
-                if (exportBtn) exportBtn.style.display = 'none';
+            // Pre-fill staff name
+            const staffNameField = document.getElementById('staff-name');
+            if (staffNameField) {
+                staffNameField.value = currentUser.name;
+                staffNameField.readOnly = true;
             }
         }
         
-        // Check if user is logged in on page load
+        // Check if user has entered their name on page load
         function checkLogin() {
-            // Check localStorage first (persists across page refreshes)
             const savedUser = localStorage.getItem('currentUser');
-            
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
                 currentUser.loggedIn = true;
+                currentUser.role = 'admin'; // Everyone is equal now
+                document.getElementById('login-modal').style.display = 'none';
                 updateUserInterface();
-                
-                // Pre-fill staff name
-                const staffNameField = document.getElementById('staff-name');
-                if (staffNameField) {
-                    staffNameField.value = currentUser.name;
-                    staffNameField.readOnly = true;
-                }
-                
-                // Start auto-refresh
                 startAutoRefresh();
             } else {
-                // Show login modal
-                const modal = document.getElementById('login-modal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                }
+                document.getElementById('login-modal').style.display = 'flex';
             }
         }
 
         // Load data on startup
         async function loadData() {
             try {
+                const syncStatus = document.getElementById('sync-status');
+                if (syncStatus) syncStatus.textContent = '⏳ Loading...';
+                
+                // First: load from localStorage cache for instant display
+                const cachedItems = localStorage.getItem('expiry-items');
+                const cachedBrands = localStorage.getItem('expiry-brands');
+                
+                if (cachedItems) {
+                    items = JSON.parse(cachedItems).map(i => ({ ...i, id: String(i.id) }));
+                }
+                if (cachedBrands) {
+                    brands = JSON.parse(cachedBrands).map(b => ({ ...b, id: String(b.id) }));
+                    invalidateBrandCache();
+                }
+                
+                if (items.length > 0 || brands.length > 0) {
+                    updateAllViews(); // Show cached data immediately
+                }
+                
+                // Then: fetch fresh data from server
                 const savedItems = await storage.get('expiry-items');
                 if (savedItems) {
-                    // Normalize all IDs to strings to prevent type mismatch issues
-                    items = savedItems.map(item => ({
-                        ...item,
-                        id: String(item.id)
-                    }));
-                    
-                    console.log('=== Data Loaded ===');
-                    console.log('Total items loaded:', items.length);
-                    if (items.length > 0) {
-                        console.log('Sample item:', items[0]);
-                        console.log('Sample ID type:', typeof items[0].id);
-                        console.log('First 5 IDs:', items.slice(0, 5).map(i => ({ id: i.id, type: typeof i.id })));
+                    const serverItems = savedItems.map(item => ({ ...item, id: String(item.id) }));
+                    // Merge: take union, server items that don't exist locally get added
+                    const localIds = new Set(items.map(i => i.id));
+                    for (const si of serverItems) {
+                        if (localIds.has(si.id)) {
+                            // Update local with server version
+                            const idx = items.findIndex(i => i.id === si.id);
+                            if (idx >= 0) items[idx] = si;
+                        } else {
+                            items.push(si);
+                        }
                     }
+                    localStorage.setItem('expiry-items', JSON.stringify(items));
+                    console.log('✓ Items loaded from server:', items.length);
                 }
                 
                 const savedBrands = await storage.get('expiry-brands');
                 if (savedBrands) {
-                    // Normalize brand IDs too
-                    brands = savedBrands.map(brand => ({
-                        ...brand,
-                        id: String(brand.id)
-                    }));
-                    invalidateBrandCache(); // Invalidate cache when brands are loaded
+                    const serverBrands = savedBrands.map(brand => ({ ...brand, id: String(brand.id) }));
+                    const localBrandIds = new Set(brands.map(b => b.id));
+                    for (const sb of serverBrands) {
+                        if (!localBrandIds.has(sb.id)) brands.push(sb);
+                    }
+                    invalidateBrandCache();
+                    localStorage.setItem('expiry-brands', JSON.stringify(brands));
+                    console.log('✓ Brands loaded from server:', brands.length);
                 }
                 
                 updateAllViews();
+                if (syncStatus) syncStatus.textContent = '';
+                
             } catch (error) {
                 console.error('Error loading data:', error);
+                const syncStatus = document.getElementById('sync-status');
+                if (syncStatus) syncStatus.textContent = '⚠️ Load error (offline?)';
             }
         }
         
@@ -2417,130 +2209,98 @@
             }
         }
 
-        // Manual refresh button function - FULL SYNC with safety checks
-        async function manualRefresh() {
-            console.log('=== MANUAL FULL REFRESH TRIGGERED ===');
-            const refreshBtn = event.target;
-            refreshBtn.disabled = true;
-            refreshBtn.textContent = '🔄 Refreshing...';
-            
-            try {
-                if (isSyncing) {
-                    alert('Save in progress. Please wait and try again.');
-                    refreshBtn.textContent = '🔄 Refresh';
-                    refreshBtn.disabled = false;
-                    return;
-                }
-                
-                // Warn user if they have unsaved changes
-                const confirmRefresh = confirm(
-                    'This will sync data from the server.\n\n' +
-                    '⚠️ Any unsaved edits will be overwritten.\n\n' +
-                    'Continue?'
-                );
-                
-                if (!confirmRefresh) {
-                    refreshBtn.textContent = '🔄 Refresh';
-                    refreshBtn.disabled = false;
-                    return;
-                }
-                
-                console.log('Local brands before:', brands.length);
-                console.log('Local items before:', items.length);
-                
-                // ===== BRANDS: Always additive (safe) =====
-                const existingBrandIds = new Set(brands.map(b => b.id));
-                const savedBrands = await storage.get('expiry-brands');
-                
-                if (savedBrands) {
-                    const normalizedBrands = savedBrands.map(brand => ({
-                        ...brand,
-                        id: String(brand.id)
-                    }));
-                    
-                    let addedBrands = 0;
-                    for (const serverBrand of normalizedBrands) {
-                        if (!existingBrandIds.has(serverBrand.id)) {
-                            brands.push(serverBrand);
-                            addedBrands++;
-                            invalidateBrandCache();
-                        }
-                    }
-                    
-                    console.log(`✓ Brands: Added ${addedBrands} new from server`);
-                }
-                
-                // ===== ITEMS: Smart merge =====
-                const existingItemIds = new Set(items.map(i => i.id));
-                const savedItems = await storage.get('expiry-items');
-                
-                if (savedItems) {
-                    const normalizedItems = savedItems.map(item => ({
-                        ...item,
-                        id: String(item.id)
-                    }));
-                    
-                    // Build map for quick lookup
-                    const localItemsMap = new Map(items.map(i => [i.id, i]));
-                    const serverItemsMap = new Map(normalizedItems.map(i => [i.id, i]));
-                    
-                    // Strategy:
-                    // 1. Add items that are on server but not local
-                    // 2. Update items that exist in both (server wins for manual refresh)
-                    // 3. Keep items that are only local (new additions not yet synced)
-                    
-                    let addedItems = 0;
-                    let updatedItems = 0;
-                    
-                    // Add new items from server
-                    for (const serverItem of normalizedItems) {
-                        if (!existingItemIds.has(serverItem.id)) {
-                            items.push(serverItem);
-                            addedItems++;
-                        } else {
-                            // Item exists - update with server version
-                            const localIndex = items.findIndex(i => i.id === serverItem.id);
-                            if (localIndex >= 0) {
-                                items[localIndex] = serverItem;
-                                updatedItems++;
-                            }
-                        }
-                    }
-                    
-                    console.log(`✓ Items: Added ${addedItems}, Updated ${updatedItems}`);
-                }
-                
-                console.log('Local brands after:', brands.length);
-                console.log('Local items after:', items.length);
-                console.log('=== MANUAL REFRESH COMPLETE ===');
-                
-                updateAllViews();
-                
-                refreshBtn.textContent = '✓ Refreshed!';
-                setTimeout(() => {
-                    refreshBtn.textContent = '🔄 Refresh';
-                    refreshBtn.disabled = false;
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Manual refresh error:', error);
-                refreshBtn.textContent = '❌ Error';
-                alert('Refresh failed. Check console for details.');
-                setTimeout(() => {
-                    refreshBtn.textContent = '🔄 Refresh';
-                    refreshBtn.disabled = false;
-                }, 2000);
-            }
-        }
+        // manualRefresh removed — data now auto-merges safely on every save
 
         // Save data
         // OPTIMIZED: Separate save functions to avoid saving everything every time
+        // ===== SAFE MERGE-THEN-SAVE (prevents data loss from concurrent device edits) =====
+        // Before saving items, this fetches the current server state and merges it with local state.
+        // This means if Device A and Device B both have the app open and adding items simultaneously,
+        // neither device will accidentally overwrite the other's data.
         async function saveItems() {
-            await storage.set('expiry-items', items);
+            try {
+                // Step 1: Fetch what's currently on the server
+                const syncStatus = document.getElementById('sync-status');
+                if (syncStatus) syncStatus.textContent = '💾 Saving...';
+                
+                let serverItems = [];
+                try {
+                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getItems&t=${Date.now()}`);
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        serverItems = data.map(i => ({ ...i, id: String(i.id) }));
+                    }
+                } catch (fetchErr) {
+                    console.warn('Could not fetch server state for merge, saving local state only:', fetchErr.message);
+                    // Fall back to direct save if we can't fetch
+                    await storage.set('expiry-items', items);
+                    if (syncStatus) syncStatus.textContent = '✓ Saved';
+                    setTimeout(() => { if (syncStatus) syncStatus.textContent = ''; }, 2000);
+                    return;
+                }
+                
+                // Step 2: Merge — server items + local items
+                // Rule: If an item exists in local, keep the LOCAL version (it has the latest edit/delete)
+                // Rule: If an item only exists on the server (added by another device), ADD it to local
+                const localIds = new Set(items.map(i => String(i.id)));
+                let newItemsFromServer = 0;
+                
+                for (const serverItem of serverItems) {
+                    if (!localIds.has(String(serverItem.id))) {
+                        // This item was added by another device — add it locally too
+                        items.push(serverItem);
+                        newItemsFromServer++;
+                    }
+                }
+                
+                if (newItemsFromServer > 0) {
+                    console.log(`✓ Merged ${newItemsFromServer} item(s) from another device before saving`);
+                    updateItemViews(); // Refresh UI to show merged items
+                }
+                
+                // Step 3: Save the merged data
+                await storage.set('expiry-items', items);
+                
+                // Also update localStorage cache
+                localStorage.setItem('expiry-items', JSON.stringify(items));
+                
+                if (syncStatus) syncStatus.textContent = '✓ Saved';
+                setTimeout(() => { if (syncStatus) syncStatus.textContent = ''; }, 2000);
+                
+            } catch (error) {
+                console.error('saveItems error:', error);
+                const syncStatus = document.getElementById('sync-status');
+                if (syncStatus) { syncStatus.textContent = '⚠️ Save error'; setTimeout(() => { syncStatus.textContent = ''; }, 3000); }
+            }
         }
         
         async function saveBrands() {
-            await storage.set('expiry-brands', brands);
+            try {
+                // Merge with server brands before saving
+                let serverBrands = [];
+                try {
+                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getBrands&t=${Date.now()}`);
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        serverBrands = data.map(b => ({ ...b, id: String(b.id) }));
+                    }
+                } catch (fetchErr) {
+                    console.warn('Could not fetch server brands for merge:', fetchErr.message);
+                }
+                
+                const localBrandIds = new Set(brands.map(b => String(b.id)));
+                for (const sb of serverBrands) {
+                    if (!localBrandIds.has(String(sb.id))) {
+                        brands.push(sb);
+                        invalidateBrandCache();
+                    }
+                }
+                
+                await storage.set('expiry-brands', brands);
+                localStorage.setItem('expiry-brands', JSON.stringify(brands));
+            } catch (error) {
+                console.error('saveBrands error:', error);
+            }
         }
         
         // Save both (only use when both actually changed)
