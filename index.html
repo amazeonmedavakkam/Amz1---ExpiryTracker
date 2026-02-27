@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
     EXPIRY TRACKER - PERFORMANCE OPTIMIZED VERSION
-    Version: 3.0 (February 2026)
+    Version: 3.1 (February 2026)
     
     NEW in v2.3:
     ✅ Analytics tab: Discarded Items Loss Trend chart (daily/weekly/monthly) with period breakdown table
@@ -353,9 +353,13 @@
             .stat-card:hover { transform: none; }
 
             /* Tables — horizontal scroll, no truncation */
-            .table-container { max-height: 60vh; border-radius: 8px; }
-            td { padding: 0.85rem 0.75rem; font-size: 0.83rem; }
-            th { padding: 0.85rem 0.75rem; font-size: 0.78rem; }
+            .table-container { max-height: 70vh; border-radius: 8px; }
+            td { padding: 0.65rem 0.6rem; font-size: 0.8rem; }
+            th { padding: 0.65rem 0.6rem; font-size: 0.75rem; }
+            .col-brand, .col-item { min-width: 120px; max-width: 170px; width: 140px; }
+            .col-date { width: 90px; min-width: 85px; font-size: 0.75rem; }
+            .col-person { width: 85px; min-width: 80px; font-size: 0.75rem; }
+            .col-action { width: 110px; min-width: 100px; }
 
             /* Forms */
             .form-grid { grid-template-columns: 1fr; gap: 0.85rem; }
@@ -564,7 +568,7 @@
         .table-container {
             overflow-x: auto;
             overflow-y: auto;
-            max-height: 65vh;
+            max-height: 75vh;          /* more vertical room = less scrolling */
             border-radius: 8px;
             border: 1px solid var(--border);
             position: relative;
@@ -590,34 +594,65 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;      /* enables explicit column width control */
         }
 
         th {
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-            padding: 1.25rem;
+            padding: 0.85rem 0.9rem;  /* tighter — saves horizontal space */
             text-align: left;
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             color: white;
             border-bottom: 3px solid var(--accent);
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             position: sticky;
             top: 0;
             z-index: 10;
-            /* Re-apply gradient since sticky can lose background in some browsers */
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         td {
-            padding: 1.25rem;
+            padding: 0.85rem 0.9rem;  /* tighter — saves horizontal space */
             border-bottom: 1px solid var(--border);
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             color: var(--text);
+            vertical-align: top;
         }
 
         tr:hover {
             background: var(--bg-secondary);
         }
+
+        /* ── Column width helpers ── */
+        /* Brand & Item Name: wide + wrap so they use space well */
+        .col-brand, .col-item {
+            min-width: 160px;
+            max-width: 240px;
+            width: 180px;
+            white-space: normal;
+            word-break: break-word;
+            font-weight: 600;
+        }
+        /* Numeric / short columns: fixed narrow widths */
+        .col-mrp    { width: 80px;  min-width: 75px;  white-space: nowrap; }
+        .col-qty    { width: 60px;  min-width: 55px;  white-space: nowrap; text-align: center; }
+        .col-date   { width: 110px; min-width: 100px; white-space: nowrap; font-size: 0.82rem; }
+        .col-days   { width: 75px;  min-width: 70px;  white-space: nowrap; text-align: center; }
+        .col-status { width: 120px; min-width: 100px; white-space: nowrap; }
+        .col-person { width: 110px; min-width: 90px;  white-space: nowrap; font-size: 0.82rem; }
+        .col-reason { min-width: 130px; max-width: 200px; width: 160px; white-space: normal; word-break: break-word; font-size: 0.82rem; }
+        .col-action { width: 140px; min-width: 120px; white-space: nowrap; }
+        .col-value  { width: 110px; min-width: 90px;  white-space: nowrap; font-weight: 600; }
+        .col-narrow { width: 70px;  min-width: 60px;  white-space: nowrap; text-align: center; }
+
+        /* td mirrors th column class constraints */
+        td.col-brand, td.col-item { font-weight: 600; }
+        td.col-qty, td.col-days, td.col-narrow { text-align: center; }
+        td.col-action { white-space: nowrap; }
 
         .badge {
             display: inline-block;
@@ -1217,8 +1252,8 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand Name</th>
-                                <th>⚙️ Action</th>
+                                <th class="col-brand">🏷️ Brand Name</th>
+                                <th class="col-action">⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="brands-list"></tbody>
@@ -1282,27 +1317,27 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>📅 Expiry Date</th>
-                                <th>🔖 Status</th>
-                                <th>🔶 Damaged</th>
-                                <th>💬 Damage Reason</th>
-                                <th>👤 Added By</th>
-                                <th>📅 Added Date</th>
-                                <th>👤 Moved By</th>
-                                <th>📅 Moved Date</th>
-                                <th>👤 Returned By</th>
-                                <th>📅 Returned Date</th>
-                                <th>👤 Sold By</th>
-                                <th>📅 Sold Date</th>
-                                <th>⏳ Days Left at Sale</th>
-                                <th>👤 Discarded By</th>
-                                <th>📅 Discarded Date</th>
-                                <th>💬 Discard Reason</th>
-                                <th>⚙️ Action</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-status">🔖 Status</th>
+                                <th class="col-narrow">🔶 Dmg</th>
+                                <th class="col-reason">💬 Reason</th>
+                                <th class="col-person">👤 Added By</th>
+                                <th class="col-date">📅 Added</th>
+                                <th class="col-person">👤 Moved By</th>
+                                <th class="col-date">📅 Moved</th>
+                                <th class="col-person">👤 Ret. By</th>
+                                <th class="col-date">📅 Returned</th>
+                                <th class="col-person">👤 Sold By</th>
+                                <th class="col-date">📅 Sold</th>
+                                <th class="col-days">⏳ Days@Sale</th>
+                                <th class="col-person">👤 Disc. By</th>
+                                <th class="col-date">📅 Discarded</th>
+                                <th class="col-reason">💬 Reason</th>
+                                <th class="col-action">⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="master-data-items"></tbody>
@@ -1367,15 +1402,15 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>📅 Expiry Date</th>
-                                <th>⏳ Days Left</th>
-                                <th>👤 Added By</th>
-                                <th>🔖 Status</th>
-                                <th>⚙️ Action</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-days">⏳ Days</th>
+                                <th class="col-person">👤 Added By</th>
+                                <th class="col-status">🔖 Status</th>
+                                <th class="col-action">⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="upcoming-items"></tbody>
@@ -1454,17 +1489,17 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>Qty</th>
-                                <th>💰 Total Value</th>
-                                <th>🔖 Category</th>
-                                <th>👤 Staff Responsible</th>
-                                <th>💬 Damage Reason</th>
-                                <th>👤 Added By</th>
-                                <th>📅 Date Added</th>
-                                <th>🔖 Status</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">Qty</th>
+                                <th class="col-value">💰 Value</th>
+                                <th class="col-status">🔖 Category</th>
+                                <th class="col-person">👤 Staff</th>
+                                <th class="col-reason">💬 Reason</th>
+                                <th class="col-person">👤 Added By</th>
+                                <th class="col-date">📅 Added</th>
+                                <th class="col-status">🔖 Status</th>
                             </tr>
                         </thead>
                         <tbody id="damaged-items-list"></tbody>
@@ -1524,14 +1559,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>📅 Expiry Date</th>
-                                <th>⏳ Days Left at Sale</th>
-                                <th>👤 Sold By</th>
-                                <th>📅 Sold Date</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-days">⏳ Days@Sale</th>
+                                <th class="col-person">👤 Sold By</th>
+                                <th class="col-date">📅 Sold</th>
                             </tr>
                         </thead>
                         <tbody id="sold-items-list"></tbody>
@@ -1591,14 +1626,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>📅 Expiry Date</th>
-                                <th>💬 Reason</th>
-                                <th>👤 Discarded By</th>
-                                <th>📅 Discarded Date</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-reason">💬 Reason</th>
+                                <th class="col-person">👤 Disc. By</th>
+                                <th class="col-date">📅 Discarded</th>
                             </tr>
                         </thead>
                         <tbody id="discarded-items-list"></tbody>
@@ -1642,14 +1677,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>📅 Expiry Date</th>
-                                <th>⏳ Days Left</th>
-                                <th>👤 Added By</th>
-                                <th>⚙️ Action</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-days">⏳ Days</th>
+                                <th class="col-person">👤 Added By</th>
+                                <th class="col-action">⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="critical-items"></tbody>
@@ -1696,14 +1731,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>📅 Expiry Date</th>
-                                <th>⏰ Days Overdue</th>
-                                <th>👤 Added By</th>
-                                <th>⚙️ Action</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-days">⏰ Overdue</th>
+                                <th class="col-person">👤 Added By</th>
+                                <th class="col-action">⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="already-expired-items"></tbody>
@@ -1747,16 +1782,16 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>📅 Expiry Date</th>
-                                <th>🔖 Type</th>
-                                <th>💬 Damage Reason</th>
-                                <th>👤 Moved By</th>
-                                <th>📅 Moved Date</th>
-                                <th>⚙️ Action</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-status">🔖 Type</th>
+                                <th class="col-reason">💬 Reason</th>
+                                <th class="col-person">👤 Moved By</th>
+                                <th class="col-date">📅 Moved</th>
+                                <th class="col-action">⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="expiry-area-items"></tbody>
@@ -1816,10 +1851,10 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>📆 Period</th>/th>
-                                <th>📊 Items Count</th>
-                                <th>📦 Total Qty</th>
-                                <th>💰 Total Worth (₹)</th>
+                                <th class="col-date">📆 Period</th>/th>
+                                <th class="col-narrow">📊 Count</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-value">💰 Worth (₹)</th>
                             </tr>
                         </thead>
                         <tbody id="period-breakdown"></tbody>
@@ -1858,12 +1893,12 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>📆 Period</th>
-                                <th>📅 Upcoming Items</th>
-                                <th>📦 Expiry Area Items</th>
-                                <th>📊 Total Items</th>
-                                <th>📦 Total Qty</th>
-                                <th>💰 Total Worth (₹)</th>
+                                <th class="col-date">📆 Period</th>
+                                <th class="col-narrow">📅 Upcoming</th>
+                                <th class="col-narrow">📦 Exp.Area</th>
+                                <th class="col-narrow">📊 Total</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-value">💰 Worth (₹)</th>
                             </tr>
                         </thead>
                         <tbody id="overall-period-breakdown"></tbody>
@@ -1903,10 +1938,10 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>📆 Period</th>
-                                    <th>🗑️ Items Discarded</th>
-                                    <th>📦 Total Qty</th>
-                                    <th>💸 Loss Value (₹)</th>
+                                    <th class="col-date">📆 Period</th>
+                                    <th class="col-narrow">🗑️ Discarded</th>
+                                    <th class="col-qty">📦 Qty</th>
+                                    <th class="col-value">💸 Loss (₹)</th>
                                 </tr>
                             </thead>
                             <tbody id="discard-period-breakdown"></tbody>
@@ -1975,15 +2010,15 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>📅 Date</th>
-                                <th>🔄 Activity</th>
-                                <th>🏷️ Brand</th>
-                                <th>📝 Item Name</th>
-                                <th>💰 MRP</th>
-                                <th>📦 Qty</th>
-                                <th>💰 Total Value</th>
-                                <th>📅 Expiry Date</th>
-                                <th>👤 Processed By</th>
+                                <th class="col-date">📅 Date</th>
+                                <th class="col-status">🔄 Activity</th>
+                                <th class="col-brand">🏷️ Brand</th>
+                                <th class="col-item">📝 Item Name</th>
+                                <th class="col-mrp">💰 MRP</th>
+                                <th class="col-qty">📦 Qty</th>
+                                <th class="col-value">💰 Value</th>
+                                <th class="col-date">📅 Expiry</th>
+                                <th class="col-person">👤 By</th>
                             </tr>
                         </thead>
                         <tbody id="period-report-items"></tbody>
@@ -3987,16 +4022,16 @@
 
             tbody.innerHTML = filtered.map(item => `
                 <tr>
-                    <td>${item.brand}</td>
-                    <td>${item.itemName || '-'}</td>
-                    <td>₹${item.mrp}</td>
-                    <td>${item.quantity}</td>
+                    <td class="col-brand">${item.brand}</td>
+                    <td class="col-item">${item.itemName || '-'}</td>
+                    <td class="col-mrp">₹${item.mrp}</td>
+                    <td class="col-qty">${item.quantity}</td>
                     <td><strong>₹${((parseFloat(item.mrp)||0)*(parseFloat(item.quantity)||0)).toFixed(2)}</strong></td>
                     <td>${catLabel(item.damageCategory)}</td>
                     <td style="color:#7c3aed; font-weight:${item.damageCategory==='staff'?'700':'400'};">${item.damageCategory==='staff' ? (item.damagedByStaff || '-') : '-'}</td>
-                    <td style="max-width:160px; word-break:break-word;">${item.damageReason || '-'}</td>
-                    <td>${item.addedBy || '-'}</td>
-                    <td>${item.addedDate ? new Date(item.addedDate).toLocaleDateString() : '-'}</td>
+                    <td class="col-reason">${item.damageReason || '-'}</td>
+                    <td class="col-person">${item.addedBy || '-'}</td>
+                    <td class="col-date">${item.addedDate ? new Date(item.addedDate).toLocaleDateString() : '-'}</td>
                     <td>${statusLabel(item)}</td>
                 </tr>
             `).join('');
@@ -4051,14 +4086,14 @@
                 const badgeClass = typeof daysLeft === 'number' && daysLeft <= 7 ? 'badge-warning' : 'badge-success';
                 return `
                     <tr>
-                        <td>${item.brand}</td>
-                        <td>${item.itemName || '-'}</td>
-                        <td>₹${item.mrp}</td>
-                        <td>${item.quantity}</td>
-                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td class="col-brand">${item.brand}</td>
+                        <td class="col-item">${item.itemName || '-'}</td>
+                        <td class="col-mrp">₹${item.mrp}</td>
+                        <td class="col-qty">${item.quantity}</td>
+                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                         <td><span class="badge ${badgeClass}">${daysLeft} days</span></td>
-                        <td>${item.soldBy || '-'}</td>
-                        <td>${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
+                        <td class="col-person">${item.soldBy || '-'}</td>
+                        <td class="col-date">${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
                     </tr>
                 `;
             }).join('');
@@ -4109,14 +4144,14 @@
             tbody.innerHTML = discardedItems.map(item => {
                 return `
                     <tr>
-                        <td>${item.brand}</td>
-                        <td>${item.itemName || '-'}</td>
-                        <td>₹${item.mrp}</td>
-                        <td>${item.quantity}</td>
-                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td class="col-brand">${item.brand}</td>
+                        <td class="col-item">${item.itemName || '-'}</td>
+                        <td class="col-mrp">₹${item.mrp}</td>
+                        <td class="col-qty">${item.quantity}</td>
+                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                         <td style="max-width:150px; word-break:break-word;">${item.discardReason || '-'}</td>
-                        <td>${item.discardedBy || '-'}</td>
-                        <td>${item.discardedDate ? new Date(item.discardedDate).toLocaleDateString() : '-'}</td>
+                        <td class="col-person">${item.discardedBy || '-'}</td>
+                        <td class="col-date">${item.discardedDate ? new Date(item.discardedDate).toLocaleDateString() : '-'}</td>
                     </tr>
                 `;
             }).join('');
@@ -4869,25 +4904,25 @@
                 
                 return `
                     <tr>
-                        <td>${item.brand}</td>
-                        <td>${item.itemName || '-'}</td>
-                        <td>₹${item.mrp}</td>
-                        <td>${item.quantity}</td>
-                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td class="col-brand">${item.brand}</td>
+                        <td class="col-item">${item.itemName || '-'}</td>
+                        <td class="col-mrp">₹${item.mrp}</td>
+                        <td class="col-qty">${item.quantity}</td>
+                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                         <td><span class="badge ${statusBadgeClass}">${statusText}</span></td>
                         <td>${damagedBadge}</td>
                         <td style="max-width:150px; word-break:break-word;">${item.isDamaged ? (item.damageReason || '-') : '-'}</td>
                         <td>${item.addedBy}</td>
                         <td>${new Date(item.addedDate).toLocaleDateString()}</td>
-                        <td>${item.movedBy || '-'}</td>
-                        <td>${item.movedDate ? new Date(item.movedDate).toLocaleDateString() : '-'}</td>
-                        <td>${item.returnedBy || '-'}</td>
-                        <td>${item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : '-'}</td>
-                        <td>${item.soldBy || '-'}</td>
-                        <td>${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
+                        <td class="col-person">${item.movedBy || '-'}</td>
+                        <td class="col-date">${item.movedDate ? new Date(item.movedDate).toLocaleDateString() : '-'}</td>
+                        <td class="col-person">${item.returnedBy || '-'}</td>
+                        <td class="col-date">${item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : '-'}</td>
+                        <td class="col-person">${item.soldBy || '-'}</td>
+                        <td class="col-date">${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
                         <td>${item.daysRemainingAtSale !== undefined ? item.daysRemainingAtSale + ' days' : '-'}</td>
-                        <td>${item.discardedBy || '-'}</td>
-                        <td>${item.discardedDate ? new Date(item.discardedDate).toLocaleDateString() : '-'}</td>
+                        <td class="col-person">${item.discardedBy || '-'}</td>
+                        <td class="col-date">${item.discardedDate ? new Date(item.discardedDate).toLocaleDateString() : '-'}</td>
                         <td style="max-width:150px; word-break:break-word;">${item.discardReason || '-'}</td>
                         <td>${actionButton}</td>
                     </tr>
@@ -5154,11 +5189,11 @@
                 const itemId = String(item.id);
                 return `
                     <tr>
-                        <td>${item.brand}</td>
-                        <td>${item.itemName || '-'}</td>
-                        <td>₹${item.mrp}</td>
-                        <td>${item.quantity}</td>
-                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td class="col-brand">${item.brand}</td>
+                        <td class="col-item">${item.itemName || '-'}</td>
+                        <td class="col-mrp">₹${item.mrp}</td>
+                        <td class="col-qty">${item.quantity}</td>
+                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                         <td><span class="badge ${badge}">${days} days</span></td>
                         <td>${item.addedBy}</td>
                         <td><span class="badge badge-warning">On Shelf</span></td>
@@ -5231,11 +5266,11 @@
                 const itemId = String(item.id); // Ensure ID is string
                 return `
                     <tr>
-                        <td>${item.brand}</td>
-                        <td>${item.itemName || '-'}</td>
-                        <td>₹${item.mrp}</td>
-                        <td>${item.quantity}</td>
-                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td class="col-brand">${item.brand}</td>
+                        <td class="col-item">${item.itemName || '-'}</td>
+                        <td class="col-mrp">₹${item.mrp}</td>
+                        <td class="col-qty">${item.quantity}</td>
+                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                         <td><span class="badge badge-danger">${days} days</span></td>
                         <td>${item.addedBy}</td>
                         <td>
@@ -5313,11 +5348,11 @@
                 const itemId = String(item.id); // Ensure ID is string
                 return `
                     <tr style="background-color: #fee;">
-                        <td>${item.brand}</td>
-                        <td>${item.itemName || '-'}</td>
-                        <td>₹${item.mrp}</td>
-                        <td>${item.quantity}</td>
-                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td class="col-brand">${item.brand}</td>
+                        <td class="col-item">${item.itemName || '-'}</td>
+                        <td class="col-mrp">₹${item.mrp}</td>
+                        <td class="col-qty">${item.quantity}</td>
+                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                         <td><span class="badge badge-danger">${daysOverdue} days overdue</span></td>
                         <td>${item.addedBy}</td>
                         <td>
@@ -5393,11 +5428,11 @@
                     : '<span class="badge badge-danger">📅 Expiry</span>';
                 return `
                 <tr>
-                    <td>${item.brand}</td>
-                    <td>${item.itemName || '-'}</td>
-                    <td>₹${item.mrp}</td>
-                    <td>${item.quantity}</td>
-                    <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                    <td class="col-brand">${item.brand}</td>
+                    <td class="col-item">${item.itemName || '-'}</td>
+                    <td class="col-mrp">₹${item.mrp}</td>
+                    <td class="col-qty">${item.quantity}</td>
+                    <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                     <td>${typeLabel}</td>
                     <td>${item.isDamaged ? (item.damageReason || '-') : '-'}</td>
                     <td>${item.movedBy}</td>
@@ -5439,23 +5474,23 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>📝 Item Name</th>
-                                    <th>💰 MRP</th>
-                                    <th>📦 Qty</th>
-                                    <th>📅 Expiry Date</th>
-                                    <th>🔖 Type</th>
-                                    <th>💬 Damage Reason</th>
-                                    <th>👤 Moved By</th>
-                                    <th>📅 Moved Date</th>
+                                    <th class="col-item">📝 Item Name</th>
+                                    <th class="col-mrp">💰 MRP</th>
+                                    <th class="col-qty">📦 Qty</th>
+                                    <th class="col-date">📅 Expiry</th>
+                                    <th class="col-status">🔖 Type</th>
+                                    <th class="col-reason">💬 Reason</th>
+                                    <th class="col-person">👤 Moved By</th>
+                                    <th class="col-date">📅 Moved</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${items.map(item => `
                                     <tr>
-                                        <td>${item.itemName || '-'}</td>
-                                        <td>₹${item.mrp}</td>
-                                        <td>${item.quantity}</td>
-                                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                                        <td class="col-item">${item.itemName || '-'}</td>
+                                        <td class="col-mrp">₹${item.mrp}</td>
+                                        <td class="col-qty">${item.quantity}</td>
+                                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                                         <td>${item.isDamaged ? '<span class="badge badge-damaged" style="font-size:0.75rem;">🔶 Damaged</span>' : '<span class="badge badge-danger" style="font-size:0.75rem;">📅 Expiry</span>'}</td>
                                         <td>${item.isDamaged ? (item.damageReason || '-') : '-'}</td>
                                         <td>${item.movedBy}</td>
@@ -5629,12 +5664,12 @@
                     <tr>
                         <td>${item.activityDate.toLocaleDateString()}</td>
                         <td><span style="color: ${activityColor}; font-weight: 600;">${item.activityType}</span></td>
-                        <td>${item.brand}</td>
-                        <td>${item.itemName || '-'}</td>
-                        <td>₹${item.mrp}</td>
-                        <td>${item.quantity}</td>
+                        <td class="col-brand">${item.brand}</td>
+                        <td class="col-item">${item.itemName || '-'}</td>
+                        <td class="col-mrp">₹${item.mrp}</td>
+                        <td class="col-qty">${item.quantity}</td>
                         <td><strong>₹${(item.mrp * item.quantity).toFixed(2)}</strong></td>
-                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td class="col-date">${new Date(item.expiryDate).toLocaleDateString()}</td>
                         <td>${item.processedBy}</td>
                     </tr>
                 `;
