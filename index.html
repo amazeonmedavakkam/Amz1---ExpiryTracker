@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <!-- 
     EXPIRY TRACKER - PERFORMANCE OPTIMIZED VERSION
-    Version: 2.2 FAST (February 2026)
+    Version: 2.4 (February 2026)
+    
+    NEW in v2.3:
+    ✅ Analytics tab: Discarded Items Loss Trend chart (daily/weekly/monthly) with period breakdown table
+    ✅ Damaged Items tab: Dedicated tab with 3 damage categories (Staff, Customer, Supplier)
+    ✅ Staff Damage Accountability: Visual breakdown of damage incidents and value by staff member
+    ✅ Damage Category and Staff fields added to the Add Items form
+    ✅ All existing features retained and fully backward-compatible
     
     PERFORMANCE IMPROVEMENTS:
     ✅ Separate save functions - saveItems() and saveBrands() to avoid saving everything
@@ -24,6 +31,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amaze On's Expiry Tracker</title>
+    <!-- Favicon: Clock icon on brand-green background -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232d6a4f'/%3E%3Ccircle cx='32' cy='36' r='18' fill='none' stroke='white' stroke-width='4'/%3E%3Cline x1='32' y1='36' x2='32' y2='24' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='32' y1='36' x2='42' y2='42' stroke='%2374c69d' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='36' r='3' fill='white'/%3E%3Crect x='26' y='12' width='12' height='6' rx='3' fill='%2374c69d'/%3E%3C/svg%3E" />
     <style>
         * {
             margin: 0;
@@ -145,6 +154,42 @@
             background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             box-shadow: 0 4px 12px var(--shadow-dark);
         }
+
+        /* ===== ICON ENHANCEMENTS ===== */
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        
+        .card h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+        }
+        
+        label {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        
+        th {
+            white-space: nowrap;
+        }
+        
+        /* Icon in table headers */
+        thead th {
+            letter-spacing: 0.2px;
+        }
+
 
         .tab-content {
             display: none;
@@ -706,7 +751,7 @@
         <div class="header-content">
             <img src="Logo_HD.jpg" alt="Amaze On Logo" class="header-logo" id="header-logo">
             <div class="header-text">
-                <h1>Expiry Tracker</h1>
+                <h1>⏰ Expiry Tracker</h1>
             </div>
             <div style="text-align: right; margin-left: auto;">
                 <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">
@@ -723,51 +768,53 @@
 
     <div class="container">
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('add')">Add Items</button>
-            <button class="tab" onclick="switchTab('brand-master')">Brand Master</button>
-            <button class="tab" onclick="switchTab('master-data')">Master Data</button>
-            <button class="tab" onclick="switchTab('upcoming')">Upcoming Expiries</button>
-            <button class="tab" onclick="switchTab('critical')">Critical (7 Days)</button>
-            <button class="tab" onclick="switchTab('already-expired')">Already Expired</button>
-            <button class="tab" onclick="switchTab('expiry-area')">Expiry Area</button>
+            <button class="tab active" onclick="switchTab('add')">➕ Add Items</button>
+            <button class="tab" onclick="switchTab('brand-master')">🏷️ Brand Master</button>
+            <button class="tab" onclick="switchTab('master-data')">📋 Master Data</button>
+            <button class="tab" onclick="switchTab('upcoming')">📅 Upcoming Expiries</button>
+            <button class="tab" onclick="switchTab('critical')">🔴 Critical (7 Days)</button>
+            <button class="tab" onclick="switchTab('already-expired')">☠️ Already Expired</button>
+            <button class="tab" onclick="switchTab('expiry-area')">📦 Expiry Area</button>
+            <button class="tab" onclick="switchTab('damaged-items')" id="damaged-items-tab-btn">🔶 Damaged Items</button>
             <button class="tab" onclick="switchTab('sold')">✅ Sold Items</button>
-            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
-            <button class="tab" onclick="switchTab('reports')">Reports</button>
+            <button class="tab" onclick="switchTab('discarded')">🗑️ Discarded</button>
+            <button class="tab" onclick="switchTab('analytics')">📊 Analytics</button>
+            <button class="tab" onclick="switchTab('reports')">📄 Reports</button>
         </div>
 
         <!-- Add Items Tab -->
         <div id="add-tab" class="tab-content active">
             <div class="card">
-                <h2>Add New Item</h2>
+                <h2>➕ Add New Item</h2>
                 <form id="add-item-form">
                     <div class="form-grid">
                         <div class="form-group brand-autocomplete">
-                            <label>Brand Name * <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                            <label>🏷️ Brand Name * <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                             <input type="text" id="brand" required placeholder="Type brand name..." autocomplete="off">
                             <div id="brand-suggestions" class="brand-suggestions"></div>
                         </div>
                         <div class="form-group">
-                            <label>Item Name *</label>
+                            <label>📝 Item Name *</label>
                             <input type="text" id="item-name" required placeholder="e.g., Milk 1L, Bread Whole Wheat">
                         </div>
                         <div class="form-group">
-                            <label>MRP (₹) *</label>
+                            <label>💰 MRP (₹) *</label>
                             <input type="number" id="mrp" step="0.01" required>
                         </div>
                         <div class="form-group">
-                            <label>Quantity *</label>
+                            <label>📦 Quantity *</label>
                             <input type="number" id="quantity" required>
                         </div>
                         <div class="form-group">
-                            <label>Expiry Date *</label>
+                            <label>📅 Expiry Date *</label>
                             <input type="date" id="expiry-date" required>
                         </div>
                         <div class="form-group">
-                            <label>Staff Name *</label>
+                            <label>👤 Staff Name *</label>
                             <input type="text" id="staff-name" required>
                         </div>
                         <div class="form-group">
-                            <label>Added Date (Optional)</label>
+                            <label>🗓️ Added Date (Optional)</label>
                             <input type="date" id="added-date-override" placeholder="Leave empty for today">
                             <small style="color: var(--text-light); font-size: 0.8rem; display: block; margin-top: 0.25rem;">
                                 For backdating old items. Defaults to today if empty.
@@ -781,14 +828,31 @@
                             </label>
                         </div>
                         <div class="form-group" id="damage-reason-field" style="display: none; grid-column: 1 / -1;">
-                            <label style="color: #f97316;">Damage Reason *</label>
-                            <input type="text" id="damage-reason" placeholder="e.g., Packaging torn, Dented can, Leaking bottle..." style="border-color: #f97316;">
-                            <small style="color: var(--text-light); font-size: 0.8rem; display: block; margin-top: 0.25rem;">
-                                Describe the damage. This will appear in all reports and the Damaged Items tab.
-                            </small>
+                            <div id="damage-fields-wrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                                <div class="form-group">
+                                    <label style="color: #f97316;">🔶 Damage Category *</label>
+                                    <select id="damage-category" onchange="toggleDamageCategoryFields()" style="border-color: #f97316; background: #fff7ed;">
+                                        <option value="">-- Select Category --</option>
+                                        <option value="staff">👤 Staff Damage</option>
+                                        <option value="customer">🛒 Customer Handling</option>
+                                        <option value="supplier">🚚 Supplier / Transit</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="damaged-by-staff-field" style="display: none;">
+                                    <label style="color: #f97316;">👤 Staff Responsible *</label>
+                                    <input type="text" id="damaged-by-staff" placeholder="Name of staff who caused damage" style="border-color: #f97316;">
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label style="color: #f97316;">💬 Damage Reason *</label>
+                                    <input type="text" id="damage-reason" placeholder="e.g., Packaging torn, Dented can, Dropped by staff..." style="border-color: #f97316;">
+                                    <small style="color: var(--text-light); font-size: 0.8rem; display: block; margin-top: 0.25rem;">
+                                        Describe the damage. Will appear in the Damaged Items tab and all reports.
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Add Item</button>
+                    <button type="submit" class="btn btn-primary">➕ Add Item</button>
                 </form>
             </div>
         </div>
@@ -796,13 +860,13 @@
         <!-- Brand Master Tab -->
         <div id="brand-master-tab" class="tab-content">
             <div class="card">
-                <h2>Add New Brand</h2>
+                <h2>➕ Add New Brand</h2>
                 <form id="add-brand-form" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 2rem;">
                     <div class="form-group" style="flex: 1;">
                         <label>Brand Name *</label>
                         <input type="text" id="new-brand-name" required placeholder="e.g., Amul, Britannia, Mother Dairy">
                     </div>
-                    <button type="submit" class="btn btn-primary">Add Brand</button>
+                    <button type="submit" class="btn btn-primary">➕ Add Brand</button>
                 </form>
             </div>
 
@@ -814,7 +878,7 @@
                 <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
                     <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">📋 Excel Format Required:</h3>
                     <div style="background: var(--bg); padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem;">
-                        <strong>Column A:</strong> Brand Name<br>
+                        <strong>📄 Column A:</strong> Brand Name<br>
                         <span style="color: var(--text-muted);">Row 1: Header (optional)</span><br>
                         <span style="color: var(--text-muted);">Row 2+: Brand names</span>
                     </div>
@@ -846,13 +910,13 @@
             </div>
 
             <div class="card">
-                <h2>Existing Brands</h2>
+                <h2>🏷️ Existing Brands</h2>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th>Brand Name</th>
-                                <th>Action</th>
+                                <th>🏷️ Brand Name</th>
+                                <th>⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="brands-list"></tbody>
@@ -865,44 +929,50 @@
         <div id="master-data-tab" class="tab-content">
             <div class="stats">
                 <div class="stat-card">
-                    <h3>Total Items Tracked</h3>
+                    <h3>📊 Total Items Tracked</h3>
                     <div class="value" id="total-items-tracked">0</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Active Items</h3>
+                    <h3>✅ Active Items</h3>
                     <div class="value" id="active-items">0</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Returned Items</h3>
+                    <h3>↩️ Returned Items</h3>
                     <div class="value" id="returned-items">0</div>
                 </div>
                 <div class="stat-card" style="background: linear-gradient(135deg, #1b4332, #2d6a4f);">
-                    <h3>Sold Items</h3>
+                    <h3>💰 Sold Items</h3>
                     <div class="value" id="sold-items-count">0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #6b7280, #9ca3af);">
+                    <h3>🗑️ Discarded Items</h3>
+                    <div class="value" id="discarded-items-count">0</div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Complete Item Tracking</h2>
+                <h2>📋 Complete Item Tracking</h2>
                 <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Status</label>
+                        <label>🔎 Filter by Status</label>
                         <select id="status-filter" onchange="updateMasterDataView()">
                             <option value="all">All Items</option>
                             <option value="upcoming">On Shelf</option>
-                            <option value="expiry-area">In Expiry Area</option>
-                            <option value="damaged-in-expiry">Damaged (In Expiry Area)</option>
+                            <option value="expiry-area">Expiry Area (All)</option>
+                            <option value="expiry-only">Expiry Area (Expiry Only)</option>
+                            <option value="damage-only">Damage</option>
                             <option value="returned">Returned</option>
                             <option value="sold">Sold</option>
+                            <option value="discarded">Discarded</option>
                         </select>
                     </div>
                     <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                         <input type="text" id="brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
                         <div id="brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Search Item</label>
+                        <label>🔍 Search Item</label>
                         <input type="text" id="search-filter" placeholder="Search by item name..." oninput="updateMasterDataView()">
                     </div>
                 </div>
@@ -910,24 +980,27 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Brand</th>
-                                <th>Item Name</th>
-                                <th>MRP</th>
-                                <th>Quantity</th>
-                                <th>Expiry Date</th>
-                                <th>Status</th>
-                                <th>Damaged</th>
-                                <th>Damage Reason</th>
-                                <th>Added By</th>
-                                <th>Added Date</th>
-                                <th>Moved By</th>
-                                <th>Moved Date</th>
-                                <th>Returned By</th>
-                                <th>Returned Date</th>
-                                <th>Sold By</th>
-                                <th>Sold Date</th>
-                                <th>Days Left at Sale</th>
-                                <th>Action</th>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>📅 Expiry Date</th>
+                                <th>🔖 Status</th>
+                                <th>🔶 Damaged</th>
+                                <th>💬 Damage Reason</th>
+                                <th>👤 Added By</th>
+                                <th>📅 Added Date</th>
+                                <th>👤 Moved By</th>
+                                <th>📅 Moved Date</th>
+                                <th>👤 Returned By</th>
+                                <th>📅 Returned Date</th>
+                                <th>👤 Sold By</th>
+                                <th>📅 Sold Date</th>
+                                <th>⏳ Days Left at Sale</th>
+                                <th>👤 Discarded By</th>
+                                <th>📅 Discarded Date</th>
+                                <th>💬 Discard Reason</th>
+                                <th>⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="master-data-items"></tbody>
@@ -944,15 +1017,15 @@
         <div id="upcoming-tab" class="tab-content">
             <div class="stats">
                 <div class="stat-card">
-                    <h3>Total Items</h3>
+                    <h3>📦 Total Items</h3>
                     <div class="value" id="total-upcoming">0</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Needs Attention</h3>
+                    <h3>⚠️ Needs Attention</h3>
                     <div class="value" id="critical-count">0</div>
                 </div>
                 <div class="stat-card" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
-                    <h3>Already Expired</h3>
+                    <h3>☠️ Already Expired</h3>
                     <div class="value" id="already-expired-count">0</div>
                 </div>
             </div>
@@ -960,27 +1033,27 @@
             <div id="alerts-container"></div>
 
             <div class="card">
-                <h2>Items Expiring in 30 Days</h2>
+                <h2>📅 Items Expiring in 30 Days</h2>
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                         <input type="text" id="upcoming-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
                         <div id="upcoming-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Expiry Date From</label>
+                        <label>📅 Expiry Date From</label>
                         <input type="date" id="upcoming-date-from" onchange="updateUpcomingView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Expiry Date To</label>
+                        <label>📅 Expiry Date To</label>
                         <input type="date" id="upcoming-date-to" onchange="updateUpcomingView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Search Item</label>
+                        <label>🔍 Search Item</label>
                         <input type="text" id="upcoming-search-filter" placeholder="Search by item name..." oninput="updateUpcomingView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Sort By</label>
+                        <label>↕️ Sort By</label>
                         <select id="upcoming-sort-filter" onchange="updateUpcomingView()">
                             <option value="expiry-asc">Expiry Date (Soonest First)</option>
                             <option value="expiry-desc">Expiry Date (Latest First)</option>
@@ -992,18 +1065,107 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Brand</th>
-                                <th>Item Name</th>
-                                <th>MRP</th>
-                                <th>Quantity</th>
-                                <th>Expiry Date</th>
-                                <th>Days Left</th>
-                                <th>Added By</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>📅 Expiry Date</th>
+                                <th>⏳ Days Left</th>
+                                <th>👤 Added By</th>
+                                <th>🔖 Status</th>
+                                <th>⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="upcoming-items"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Damaged Items Tab -->
+        <div id="damaged-items-tab" class="tab-content">
+            <!-- Summary Stats -->
+            <div class="stats">
+                <div class="stat-card" style="background: linear-gradient(135deg, #c2410c, #f97316);">
+                    <h3>🔶 Total Damaged</h3>
+                    <div class="value" id="damaged-total-count">0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #9a3412, #c2410c);">
+                    <h3>💰 Total Value (MRP × Qty)</h3>
+                    <div class="value" id="damaged-total-value">₹0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
+                    <h3>👤 Staff Caused</h3>
+                    <div class="value" id="damaged-by-staff-count">0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #0369a1, #38bdf8);">
+                    <h3>🛒 Customer Caused</h3>
+                    <div class="value" id="damaged-by-customer-count">0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #065f46, #34d399);">
+                    <h3>🚚 Supplier Caused</h3>
+                    <div class="value" id="damaged-by-supplier-count">0</div>
+                </div>
+            </div>
+
+            <!-- Staff Accountability Card -->
+            <div class="card" style="border: 2px solid #f97316;">
+                <h2 style="color: #c2410c;">👤 Staff Damage Accountability</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Track which staff members have caused damage and the financial impact.</p>
+                <div id="staff-damage-breakdown">
+                    <div class="empty-state">No staff-related damage recorded.</div>
+                </div>
+            </div>
+
+            <!-- Damaged Items List -->
+            <div class="card">
+                <h2>🔶 All Damaged Items</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1rem;">Items recorded as damaged by staff, customers, or supplier/transit issues.</p>
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label>🔎 Filter by Category</label>
+                        <select id="damaged-category-filter" onchange="updateDamagedView()" style="padding: 0.75rem; border: 2px solid var(--border); border-radius: 10px; font-family: inherit;">
+                            <option value="all">All Categories</option>
+                            <option value="staff">👤 Staff Damage</option>
+                            <option value="customer">🛒 Customer Handling</option>
+                            <option value="supplier">🚚 Supplier / Transit</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label>👤 Filter by Staff</label>
+                        <input type="text" id="damaged-staff-filter" placeholder="Type staff name..." oninput="updateDamagedView()" style="padding: 0.75rem; border: 2px solid var(--border); border-radius: 10px; font-family: inherit;">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label>Date From</label>
+                        <input type="date" id="damaged-date-from" onchange="updateDamagedView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label>Date To</label>
+                        <input type="date" id="damaged-date-to" onchange="updateDamagedView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 180px;">
+                        <label>🔍 Search Item</label>
+                        <input type="text" id="damaged-search-filter" placeholder="Search brand / item..." oninput="updateDamagedView()">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>Qty</th>
+                                <th>💰 Total Value</th>
+                                <th>🔖 Category</th>
+                                <th>👤 Staff Responsible</th>
+                                <th>💬 Damage Reason</th>
+                                <th>👤 Added By</th>
+                                <th>📅 Date Added</th>
+                                <th>🔖 Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="damaged-items-list"></tbody>
                     </table>
                 </div>
             </div>
@@ -1013,15 +1175,15 @@
         <div id="sold-tab" class="tab-content">
             <div class="stats">
                 <div class="stat-card" style="background: linear-gradient(135deg, #1b4332, #2d6a4f);">
-                    <h3>Total Sold</h3>
+                    <h3>✅ Total Sold</h3>
                     <div class="value" id="sold-total-count">0</div>
                 </div>
                 <div class="stat-card" style="background: linear-gradient(135deg, #2d6a4f, #40916c);">
-                    <h3>Total Value (MRP × Qty)</h3>
+                    <h3>💰 Total Value (MRP × Qty)</h3>
                     <div class="value" id="sold-total-value">₹0</div>
                 </div>
                 <div class="stat-card" style="background: linear-gradient(135deg, #40916c, #52b788);">
-                    <h3>Brands Sold</h3>
+                    <h3>🏷️ Brands Sold</h3>
                     <div class="value" id="sold-total-brands">0</div>
                 </div>
             </div>
@@ -1030,24 +1192,24 @@
                 <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Items that were sold before expiry (not moved to Expiry Area).</p>
                 <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                         <input type="text" id="sold-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
                         <div id="sold-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Sold Date From</label>
+                        <label>📅 Sold Date From</label>
                         <input type="date" id="sold-date-from" onchange="updateSoldView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Sold Date To</label>
+                        <label>📅 Sold Date To</label>
                         <input type="date" id="sold-date-to" onchange="updateSoldView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Search Item</label>
+                        <label>🔍 Search Item</label>
                         <input type="text" id="sold-search-filter" placeholder="Search by item name..." oninput="updateSoldView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Sort By</label>
+                        <label>↕️ Sort By</label>
                         <select id="sold-sort-filter" onchange="updateSoldView()">
                             <option value="sold-desc">Sold Date (Newest First)</option>
                             <option value="sold-asc">Sold Date (Oldest First)</option>
@@ -1060,14 +1222,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Brand</th>
-                                <th>Item Name</th>
-                                <th>MRP</th>
-                                <th>Quantity</th>
-                                <th>Expiry Date</th>
-                                <th>Days Left at Sale</th>
-                                <th>Sold By</th>
-                                <th>Sold Date</th>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>📅 Expiry Date</th>
+                                <th>⏳ Days Left at Sale</th>
+                                <th>👤 Sold By</th>
+                                <th>📅 Sold Date</th>
                             </tr>
                         </thead>
                         <tbody id="sold-items-list"></tbody>
@@ -1076,30 +1238,97 @@
             </div>
         </div>
 
+        <!-- Discarded Items Tab -->
+        <div id="discarded-tab" class="tab-content">
+            <div class="stats">
+                <div class="stat-card" style="background: linear-gradient(135deg, #6b7280, #9ca3af);">
+                    <h3>🗑️ Total Discarded</h3>
+                    <div class="value" id="discarded-total-count">0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #9ca3af, #d1d5db);">
+                    <h3>💰 Total Value (MRP × Qty)</h3>
+                    <div class="value" id="discarded-total-value">₹0</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                    <h3>💸 Non-Returnable Loss</h3>
+                    <div class="value" id="discarded-loss-indicator">🗑️</div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>🗑️ Discarded Items (Non-Returnable)</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Items that were thrown away and cannot be returned to suppliers.</p>
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
+                        <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <input type="text" id="discarded-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
+                        <div id="discarded-brand-filter-suggestions" class="brand-suggestions"></div>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>📅 Discarded Date From</label>
+                        <input type="date" id="discarded-date-from" onchange="updateDiscardedView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>📅 Discarded Date To</label>
+                        <input type="date" id="discarded-date-to" onchange="updateDiscardedView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>🔍 Search Item</label>
+                        <input type="text" id="discarded-search-filter" placeholder="Search by item name..." oninput="updateDiscardedView()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label>↕️ Sort By</label>
+                        <select id="discarded-sort-filter" onchange="updateDiscardedView()">
+                            <option value="discarded-desc">Discarded Date (Newest First)</option>
+                            <option value="discarded-asc">Discarded Date (Oldest First)</option>
+                            <option value="expiry-asc">Expiry Date (Soonest First)</option>
+                            <option value="brand">Brand (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>📅 Expiry Date</th>
+                                <th>💬 Reason</th>
+                                <th>👤 Discarded By</th>
+                                <th>📅 Discarded Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="discarded-items-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Critical Tab -->
         <div id="critical-tab" class="tab-content">
             <div class="card">
-                <h2>Critical Items (7 Days or Less)</h2>
+                <h2>🔴 Critical Items (7 Days or Less)</h2>
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                         <input type="text" id="critical-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
                         <div id="critical-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Expiry Date From</label>
+                        <label>📅 Expiry Date From</label>
                         <input type="date" id="critical-date-from" onchange="updateCriticalView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Expiry Date To</label>
+                        <label>📅 Expiry Date To</label>
                         <input type="date" id="critical-date-to" onchange="updateCriticalView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Search Item</label>
+                        <label>🔍 Search Item</label>
                         <input type="text" id="critical-search-filter" placeholder="Search by item name..." oninput="updateCriticalView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Sort By</label>
+                        <label>↕️ Sort By</label>
                         <select id="critical-sort-filter" onchange="updateCriticalView()">
                             <option value="expiry-asc">Expiry Date (Soonest First)</option>
                             <option value="expiry-desc">Expiry Date (Latest First)</option>
@@ -1111,14 +1340,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Brand</th>
-                                <th>Item Name</th>
-                                <th>MRP</th>
-                                <th>Quantity</th>
-                                <th>Expiry Date</th>
-                                <th>Days Left</th>
-                                <th>Added By</th>
-                                <th>Action</th>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>📅 Expiry Date</th>
+                                <th>⏳ Days Left</th>
+                                <th>👤 Added By</th>
+                                <th>⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="critical-items"></tbody>
@@ -1130,30 +1359,30 @@
         <!-- Already Expired Tab -->
         <div id="already-expired-tab" class="tab-content">
             <div class="card">
-                <h2>Already Expired Items</h2>
+                <h2>☠️ Already Expired Items</h2>
                 <p style="color: var(--danger); font-weight: 600; margin-bottom: 1.5rem;">
-                    ⚠️ These items have already passed their expiry date and require immediate attention!
+                    🚨 These items have already passed their expiry date and require immediate attention!
                 </p>
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                         <input type="text" id="already-expired-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
                         <div id="already-expired-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Expiry Date From</label>
+                        <label>📅 Expiry Date From</label>
                         <input type="date" id="already-expired-date-from" onchange="updateAlreadyExpiredView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Expiry Date To</label>
+                        <label>📅 Expiry Date To</label>
                         <input type="date" id="already-expired-date-to" onchange="updateAlreadyExpiredView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Search Item</label>
+                        <label>🔍 Search Item</label>
                         <input type="text" id="already-expired-search-filter" placeholder="Search by item name..." oninput="updateAlreadyExpiredView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Sort By</label>
+                        <label>↕️ Sort By</label>
                         <select id="already-expired-sort-filter" onchange="updateAlreadyExpiredView()">
                             <option value="expiry-asc">Expiry Date (Oldest First)</option>
                             <option value="expiry-desc">Expiry Date (Most Recent First)</option>
@@ -1165,14 +1394,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Brand</th>
-                                <th>Item Name</th>
-                                <th>MRP</th>
-                                <th>Quantity</th>
-                                <th>Expiry Date</th>
-                                <th>Days Overdue</th>
-                                <th>Added By</th>
-                                <th>Action</th>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>📅 Expiry Date</th>
+                                <th>⏰ Days Overdue</th>
+                                <th>👤 Added By</th>
+                                <th>⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="already-expired-items"></tbody>
@@ -1184,27 +1413,27 @@
         <!-- Expiry Area Tab -->
         <div id="expiry-area-tab" class="tab-content">
             <div class="card">
-                <h2>Items in Expiry Area</h2>
+                <h2>📦 Items in Expiry Area</h2>
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
-                        <label>Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
+                        <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
                         <input type="text" id="expiry-area-brand-filter" placeholder="All Brands (or type to search)" autocomplete="off">
                         <div id="expiry-area-brand-filter-suggestions" class="brand-suggestions"></div>
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Moved Date From</label>
+                        <label>📅 Moved Date From</label>
                         <input type="date" id="expiry-area-date-from" onchange="updateExpiryAreaView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Moved Date To</label>
+                        <label>📅 Moved Date To</label>
                         <input type="date" id="expiry-area-date-to" onchange="updateExpiryAreaView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Search Item</label>
+                        <label>🔍 Search Item</label>
                         <input type="text" id="expiry-area-search-filter" placeholder="Search by item name..." oninput="updateExpiryAreaView()">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Sort By</label>
+                        <label>↕️ Sort By</label>
                         <select id="expiry-area-sort-filter" onchange="updateExpiryAreaView()">
                             <option value="moved-desc">Recently Moved</option>
                             <option value="moved-asc">Oldest First</option>
@@ -1216,16 +1445,16 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Brand</th>
-                                <th>Item Name</th>
-                                <th>MRP</th>
-                                <th>Quantity</th>
-                                <th>Expiry Date</th>
-                                <th>Type</th>
-                                <th>Damage Reason</th>
-                                <th>Moved By</th>
-                                <th>Moved Date</th>
-                                <th>Action</th>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>📅 Expiry Date</th>
+                                <th>🔖 Type</th>
+                                <th>💬 Damage Reason</th>
+                                <th>👤 Moved By</th>
+                                <th>📅 Moved Date</th>
+                                <th>⚙️ Action</th>
                             </tr>
                         </thead>
                         <tbody id="expiry-area-items"></tbody>
@@ -1238,25 +1467,25 @@
         <div id="analytics-tab" class="tab-content">
             <div class="stats">
                 <div class="stat-card">
-                    <h3>Current Week Worth</h3>
+                    <h3>📅 Current Week Worth</h3>
                     <div class="value" id="current-week-worth">₹0</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Total Expiry Area Worth</h3>
+                    <h3>📦 Total Expiry Area Worth</h3>
                     <div class="value" id="total-expiry-worth">₹0</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Total Overall Expiry Value</h3>
+                    <h3>💰 Total Overall Expiry Value</h3>
                     <div class="value" id="total-overall-worth">₹0</div>
                     <small style="color: var(--text-light); font-size: 0.75rem; display: block; margin-top: 0.5rem;">
-                        Upcoming + Expiry Area
+                        📦 Upcoming + Expiry Area
                     </small>
                 </div>
             </div>
 
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>Expiry Area Value Trend (Historical)</h2>
+                    <h2>📈 Expiry Area Value Trend (Historical)</h2>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('day')" id="trend-day-btn">Daily</button>
                         <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeTrendView('week')" id="trend-week-btn">Weekly</button>
@@ -1280,15 +1509,15 @@
             </div>
 
             <div class="card">
-                <h2>Period Breakdown</h2>
+                <h2>📆 Period Breakdown</h2>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th>Period</th>
-                                <th>Items Count</th>
-                                <th>Total Quantity</th>
-                                <th>Total Worth (₹)</th>
+                                <th>📆 Period</th>/th>
+                                <th>📊 Items Count</th>
+                                <th>📦 Total Qty</th>
+                                <th>💰 Total Worth (₹)</th>
                             </tr>
                         </thead>
                         <tbody id="period-breakdown"></tbody>
@@ -1308,7 +1537,7 @@
                 
                 <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981;">
                     <p style="color: var(--text-light); font-size: 0.9rem; margin: 0;">
-                        <strong>📈 Cumulative Trend:</strong> Shows the <strong>TOTAL combined value</strong> of <span style="color: #f59e0b; font-weight: 600;">Upcoming Expiries</span> + <span style="color: #dc2626; font-weight: 600;">Expiry Area</span> at each point in time. Perfect for setting overall reduction targets and analyzing your complete expiry exposure trends.
+                        <strong>📈 Cumulative Trend:</strong> Shows the <strong>TOTAL combined value</strong> of <span style="color: #f59e0b; font-weight: 600;">📅 Upcoming Expiries</span> + <span style="color: #dc2626; font-weight: 600;">📦 Expiry Area</span> at each point in time. Perfect for setting overall reduction targets and analyzing your complete expiry exposure trends.
                     </p>
                 </div>
                 
@@ -1322,21 +1551,65 @@
             </div>
 
             <div class="card">
-                <h2>Overall Period Breakdown</h2>
+                <h2>📆 Overall Period Breakdown</h2>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th>Period</th>
-                                <th>Upcoming Items</th>
-                                <th>Expiry Area Items</th>
-                                <th>Total Items</th>
-                                <th>Total Quantity</th>
-                                <th>Total Worth (₹)</th>
+                                <th>📆 Period</th>
+                                <th>📅 Upcoming Items</th>
+                                <th>📦 Expiry Area Items</th>
+                                <th>📊 Total Items</th>
+                                <th>📦 Total Qty</th>
+                                <th>💰 Total Worth (₹)</th>
                             </tr>
                         </thead>
                         <tbody id="overall-period-breakdown"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Discarded Items Loss Trend -->
+            <div class="card" style="background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%); border: 2px solid #fca5a5;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="color: #991b1b;">🗑️ Discarded Items Loss Trend (Direct Loss)</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeDiscardTrendView('day')" id="discard-trend-day-btn">Daily</button>
+                        <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeDiscardTrendView('week')" id="discard-trend-week-btn">Weekly</button>
+                        <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="changeDiscardTrendView('month')" id="discard-trend-month-btn">Monthly</button>
+                    </div>
+                </div>
+
+                <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #dc2626;">
+                    <p style="color: var(--text-light); font-size: 0.9rem; margin: 0;">
+                        <strong>💸 Direct Loss Tracker:</strong> Shows value of items <strong>permanently discarded</strong> (non-returnable) per period. Use this to monitor your actual write-off losses and identify peak loss periods.
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollDiscardTrend('prev')" id="discard-trend-prev-btn">← Previous</button>
+                    <span id="discard-trend-range-display" style="font-weight: 500; flex: 1; text-align: center;"></span>
+                    <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="scrollDiscardTrend('next')" id="discard-trend-next-btn">Next →</button>
+                </div>
+
+                <div id="discard-trend-chart" style="margin-top: 2rem;"></div>
+
+                <!-- Discard Period Breakdown Table -->
+                <div style="margin-top: 2rem;">
+                    <h3 style="color: #991b1b; margin-bottom: 1rem;">Period Breakdown</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>📆 Period</th>
+                                    <th>🗑️ Items Discarded</th>
+                                    <th>📦 Total Qty</th>
+                                    <th>💸 Loss Value (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="discard-period-breakdown"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1349,15 +1622,15 @@
                 <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                         <div class="form-group">
-                            <label>From Date</label>
+                            <label>📅 From Date</label>
                             <input type="date" id="report-date-from" onchange="updatePeriodReport()">
                         </div>
                         <div class="form-group">
-                            <label>To Date</label>
+                            <label>📅 To Date</label>
                             <input type="date" id="report-date-to" onchange="updatePeriodReport()">
                         </div>
                         <div class="form-group">
-                            <label>Activity Type</label>
+                            <label>🔄 Activity Type</label>
                             <select id="report-activity-type" onchange="updatePeriodReport()">
                                 <option value="all">All Activities</option>
                                 <option value="moved">Moved to Expiry Area</option>
@@ -1365,13 +1638,13 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Brand Filter</label>
+                            <label>🏷️ Brand Filter</label>
                             <select id="report-brand-filter" onchange="updatePeriodReport()">
                                 <option value="all">All Brands</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Quick Periods</label>
+                            <label>⚡ Quick Periods</label>
                             <select id="report-quick-period" onchange="applyQuickPeriod()">
                                 <option value="">Select Period...</option>
                                 <option value="today">Today</option>
@@ -1400,15 +1673,15 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Activity</th>
-                                <th>Brand</th>
-                                <th>Item Name</th>
-                                <th>MRP</th>
-                                <th>Quantity</th>
-                                <th>Total Value</th>
-                                <th>Expiry Date</th>
-                                <th>Processed By</th>
+                                <th>📅 Date</th>
+                                <th>🔄 Activity</th>
+                                <th>🏷️ Brand</th>
+                                <th>📝 Item Name</th>
+                                <th>💰 MRP</th>
+                                <th>📦 Qty</th>
+                                <th>💰 Total Value</th>
+                                <th>📅 Expiry Date</th>
+                                <th>👤 Processed By</th>
                             </tr>
                         </thead>
                         <tbody id="period-report-items"></tbody>
@@ -1417,7 +1690,7 @@
             </div>
 
             <div class="card">
-                <h2>Brand-wise Expiry Report</h2>
+                <h2>🏷️ Brand-wise Expiry Report</h2>
                 <div style="margin-bottom: 1rem;">
                     <button class="btn btn-primary" onclick="exportBrandReportToCSV()">
                         📥 Download Brand Report CSV
@@ -1683,6 +1956,10 @@
         let overallTrendView = 'week';
         let overallTrendOffset = 0;
         
+        // Discarded items trend view state
+        let discardTrendView = 'week';
+        let discardTrendOffset = 0;
+        
         // Check login status on page load
         setTimeout(function() {
             checkLogin();
@@ -1711,11 +1988,21 @@
                 
                 const isDamaged = document.getElementById('is-damaged').checked;
                 const damageReason = isDamaged ? (document.getElementById('damage-reason').value.trim() || '') : '';
+                const damageCategory = isDamaged ? (document.getElementById('damage-category').value || '') : '';
+                const damagedByStaff = (isDamaged && damageCategory === 'staff') ? (document.getElementById('damaged-by-staff').value.trim() || '') : '';
                 const staffName = document.getElementById('staff-name').value;
 
-                // Validate damage reason if damaged
+                // Validate damage fields if damaged
+                if (isDamaged && !damageCategory) {
+                    alert('Please select a Damage Category.');
+                    return;
+                }
                 if (isDamaged && !damageReason) {
-                    alert('Please enter a damage reason.');
+                    alert('Please enter a Damage Reason.');
+                    return;
+                }
+                if (isDamaged && damageCategory === 'staff' && !damagedByStaff) {
+                    alert('Please enter the name of the staff responsible for the damage.');
                     return;
                 }
 
@@ -1731,6 +2018,8 @@
                     status: isDamaged ? 'expiry-area' : 'upcoming',
                     isDamaged: isDamaged,
                     damageReason: damageReason,
+                    damageCategory: damageCategory || null,
+                    damagedByStaff: damagedByStaff || null,
                     movedBy: isDamaged ? staffName : null,
                     movedDate: isDamaged ? new Date().toISOString() : null,
                     returnedBy: null,
@@ -1746,6 +2035,8 @@
                 document.getElementById('staff-name').value = currentUser.name;
                 // Reset damaged fields
                 document.getElementById('damage-reason-field').style.display = 'none';
+                document.getElementById('damage-category').value = '';
+                document.getElementById('damaged-by-staff-field').style.display = 'none';
                 alert(item.isDamaged 
                     ? '🔶 Damaged item added and placed directly in Expiry Area!' 
                     : 'Item added successfully!');
@@ -1865,6 +2156,7 @@
             setupFilterAutocomplete('already-expired-brand-filter', 'already-expired-brand-filter-suggestions', updateAlreadyExpiredView);
             setupFilterAutocomplete('expiry-area-brand-filter', 'expiry-area-brand-filter-suggestions', updateExpiryAreaView);
             setupFilterAutocomplete('sold-brand-filter', 'sold-brand-filter-suggestions', updateSoldView);
+            setupFilterAutocomplete('discarded-brand-filter', 'discarded-brand-filter-suggestions', updateDiscardedView);
 
             // Setup dual scrollbars (top + bottom) for all wide tables
             setupDualScrollbars();
@@ -1877,6 +2169,19 @@
             damageReasonField.style.display = isDamaged ? 'block' : 'none';
             if (!isDamaged) {
                 document.getElementById('damage-reason').value = '';
+                document.getElementById('damage-category').value = '';
+                document.getElementById('damaged-by-staff').value = '';
+                document.getElementById('damaged-by-staff-field').style.display = 'none';
+            }
+        }
+
+        // Toggle staff name field based on category
+        function toggleDamageCategoryFields() {
+            const category = document.getElementById('damage-category').value;
+            const staffField = document.getElementById('damaged-by-staff-field');
+            staffField.style.display = category === 'staff' ? 'block' : 'none';
+            if (category !== 'staff') {
+                document.getElementById('damaged-by-staff').value = '';
             }
         }
 
@@ -2555,11 +2860,54 @@
                 <tr>
                     <td><strong>${brand.name}</strong></td>
                     <td>
+                        <button class="btn btn-primary" style="margin-right:0.5rem;" onclick="editBrand('${brand.id}')">Edit</button>
                         <button class="btn btn-danger" onclick="deleteBrand('${brand.id}')">Delete</button>
                     </td>
                 </tr>
             `).join('');
         }, 100); // Debounce 100ms
+
+        // Edit brand name
+        async function editBrand(id) {
+            if (currentUser.role !== 'admin') {
+                alert('Only admins can edit brands');
+                return;
+            }
+            
+            const brand = brands.find(b => b.id === id);
+            if (!brand) return;
+            
+            const newName = prompt(`Edit brand name:\n\nCurrent: ${brand.name}\n\nEnter new name:`, brand.name);
+            if (!newName || newName.trim() === '') return;
+            if (newName.trim() === brand.name) return; // No change
+            
+            // Check if new name already exists
+            if (brands.some(b => b.id !== id && b.name.toLowerCase() === newName.trim().toLowerCase())) {
+                alert(`Brand "${newName.trim()}" already exists!`);
+                return;
+            }
+            
+            const oldName = brand.name;
+            const updatedName = newName.trim();
+            
+            if (!confirm(`Update brand "${oldName}" to "${updatedName}"?\n\nThis will also update all ${items.filter(i => i.brand === oldName).length} items using this brand.`)) return;
+            
+            // Update brand name
+            brand.name = updatedName;
+            
+            // Update all items using this brand
+            items.forEach(item => {
+                if (item.brand === oldName) {
+                    item.brand = updatedName;
+                }
+            });
+            
+            invalidateBrandCache();
+            await saveBrands();
+            await saveItems();
+            updateAllViews();
+            alert(`✅ Brand updated: "${oldName}" → "${updatedName}"`);
+        }
 
         // Delete brand
         async function deleteBrand(id) {
@@ -2824,6 +3172,17 @@
             
             const item = items.find(i => i.id === id);
             if (!item) return;
+
+            // Brand selection
+            const brandList = getSortedBrands().map(b => b.name).join('\n');
+            const newBrand = prompt(`Select Brand:\n\nCurrent: ${item.brand}\n\nAvailable brands:\n${brandList.substring(0, 500)}${brandList.length > 500 ? '...' : ''}\n\nEnter brand name (must match exactly):`, item.brand);
+            if (newBrand === null) return; // Cancelled
+            
+            // Validate brand exists
+            if (!brands.some(b => b.name === newBrand.trim())) {
+                alert(`Brand "${newBrand.trim()}" does not exist. Please use an existing brand or add it in Brand Master first.`);
+                return;
+            }
             
             const itemName = prompt('Item Name:', item.itemName || '');
             if (itemName === null) return;
@@ -2837,6 +3196,7 @@
             const expiryDate = prompt('Expiry Date (YYYY-MM-DD):', item.expiryDate);
             if (expiryDate === null) return;
             
+            item.brand = newBrand.trim();
             item.itemName = itemName || item.itemName;
             item.mrp = parseFloat(mrp) || item.mrp;
             item.quantity = parseInt(quantity) || item.quantity;
@@ -2997,6 +3357,58 @@
             }
         }
 
+        // Mark as DISCARDED - thrown away, non-returnable
+        async function markDiscarded(id) {
+            try {
+                const item = items.find(i => i.id === id || String(i.id) === String(id));
+                if (!item) {
+                    alert('Error: Item not found. Refreshing...');
+                    await autoRefreshData();
+                    return;
+                }
+                
+                if (item.status !== 'expiry-area') {
+                    alert(`This item is in ${item.status} status, not in expiry area. Refreshing data...`);
+                    await autoRefreshData();
+                    return;
+                }
+                
+                // Confirm discarding (non-returnable)
+                if (!confirm(`⚠️ Mark as Discarded (Non-Returnable)?\n\nItem: ${item.brand} - ${item.itemName || ''}\nQuantity: ${item.quantity}\nValue: ₹${item.mrp * item.quantity}\n\nThis item will be marked as thrown away and cannot be returned to supplier.`)) {
+                    return;
+                }
+                
+                // PROMPT FOR NAME
+                const personName = prompt(`Who is discarding this item?\n\nItem: ${item.brand} - ${item.itemName || ''}`, currentUser.name);
+                
+                if (!personName || personName.trim() === '') {
+                    alert('Action cancelled - name is required');
+                    return;
+                }
+
+                // Optional reason
+                const reason = prompt('Reason for discarding (optional):\n\nExamples: Spoiled, Damaged beyond return, Health hazard, etc.', item.isDamaged ? (item.damageReason || '') : '') || 'Not specified';
+                
+                // Update item
+                item.status = 'discarded';
+                item.discardedBy = personName.trim();
+                item.discardedDate = new Date().toISOString();
+                item.discardReason = reason.trim();
+                
+                updateItemViews();
+                alert('✅ Item marked as discarded (non-returnable).');
+                
+                saveItems().catch(error => {
+                    console.error('Background save failed:', error);
+                    alert('Warning: Item marked in app but may not be saved to server. Please check connection.');
+                });
+                
+            } catch (error) {
+                console.error('Error marking discarded:', error);
+                alert('Failed to mark as discarded. Error: ' + error.message);
+            }
+        }
+
         // Mark as SOLD - before expiry (not moved to expiry area)
         async function markAsSold(id) {
             try {
@@ -3046,6 +3458,146 @@
                 console.error('Error marking as sold:', error);
                 alert('Failed to mark as sold. Error: ' + error.message);
             }
+        }
+
+        // ===== DAMAGED ITEMS VIEW =====
+        function updateDamagedView() {
+            const damagedItems = items.filter(i => i.isDamaged);
+
+            // Summary stats
+            const totalVal = damagedItems.reduce((s, i) => s + (parseFloat(i.mrp) * parseFloat(i.quantity) || 0), 0);
+            const staffDmg = damagedItems.filter(i => i.damageCategory === 'staff');
+            const custDmg  = damagedItems.filter(i => i.damageCategory === 'customer');
+            const suppDmg  = damagedItems.filter(i => i.damageCategory === 'supplier');
+
+            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setEl('damaged-total-count',       damagedItems.length);
+            setEl('damaged-total-value',       '₹' + totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            setEl('damaged-by-staff-count',    staffDmg.length);
+            setEl('damaged-by-customer-count', custDmg.length);
+            setEl('damaged-by-supplier-count', suppDmg.length);
+
+            // Staff accountability card
+            const staffBreakdown = document.getElementById('staff-damage-breakdown');
+            if (staffBreakdown) {
+                if (staffDmg.length === 0) {
+                    staffBreakdown.innerHTML = '<div class="empty-state">No staff-related damage recorded yet.</div>';
+                } else {
+                    // Group by staff name
+                    const staffMap = {};
+                    staffDmg.forEach(i => {
+                        const name = i.damagedByStaff || i.addedBy || 'Unknown';
+                        if (!staffMap[name]) staffMap[name] = { count: 0, qty: 0, value: 0, items: [] };
+                        staffMap[name].count++;
+                        staffMap[name].qty   += parseFloat(i.quantity) || 0;
+                        staffMap[name].value += (parseFloat(i.mrp) * parseFloat(i.quantity)) || 0;
+                        staffMap[name].items.push(i);
+                    });
+                    const maxVal = Math.max(...Object.values(staffMap).map(s => s.value), 1);
+                    staffBreakdown.innerHTML = `
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                                <thead>
+                                    <tr style="background: linear-gradient(135deg, #7c3aed, #a78bfa); color:white;">
+                                        <th style="padding:0.85rem; text-align:left;">Staff Name</th>
+                                        <th style="padding:0.85rem; text-align:left;">Incidents</th>
+                                        <th style="padding:0.85rem; text-align:left;">Total Qty</th>
+                                        <th style="padding:0.85rem; text-align:left;">Loss Value (₹)</th>
+                                        <th style="padding:0.85rem; text-align:left;">Impact Bar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(staffMap)
+                                        .sort((a, b) => b[1].value - a[1].value)
+                                        .map(([name, data], idx) => {
+                                            const barWidth = Math.round((data.value / maxVal) * 100);
+                                            const rowBg = idx % 2 === 0 ? '#fdf4ff' : '#fff';
+                                            return `
+                                            <tr style="background:${rowBg};">
+                                                <td style="padding:0.85rem; font-weight:700; color:#7c3aed;">👤 ${name}</td>
+                                                <td style="padding:0.85rem;">${data.count} incident${data.count > 1 ? 's' : ''}</td>
+                                                <td style="padding:0.85rem;">${data.qty}</td>
+                                                <td style="padding:0.85rem; font-weight:700; color:#dc2626;">₹${data.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                <td style="padding:0.85rem; min-width:120px;">
+                                                    <div style="background:#f3e8ff; border-radius:4px; height:12px; width:100%;">
+                                                        <div style="background: linear-gradient(90deg,#7c3aed,#a78bfa); height:12px; border-radius:4px; width:${barWidth}%;"></div>
+                                                    </div>
+                                                    <span style="font-size:0.75rem; color:#7c3aed;">${barWidth}%</span>
+                                                </td>
+                                            </tr>`;
+                                        }).join('')}
+                                </tbody>
+                                <tfoot>
+                                    <tr style="background:#ede9fe; font-weight:700;">
+                                        <td style="padding:0.85rem;">TOTAL</td>
+                                        <td style="padding:0.85rem;">${staffDmg.length}</td>
+                                        <td style="padding:0.85rem;">${staffDmg.reduce((s,i)=>s+(parseFloat(i.quantity)||0),0)}</td>
+                                        <td style="padding:0.85rem; color:#dc2626;">₹${staffDmg.reduce((s,i)=>s+(parseFloat(i.mrp)*parseFloat(i.quantity)||0),0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>`;
+                }
+            }
+
+            // Filtered table
+            const tbody = document.getElementById('damaged-items-list');
+            if (!tbody) return;
+
+            const catFilter  = (document.getElementById('damaged-category-filter')?.value || 'all');
+            const staffFilt  = (document.getElementById('damaged-staff-filter')?.value || '').toLowerCase();
+            const searchFilt = (document.getElementById('damaged-search-filter')?.value || '').toLowerCase();
+            const dateFrom   = document.getElementById('damaged-date-from')?.value || '';
+            const dateTo     = document.getElementById('damaged-date-to')?.value || '';
+
+            let filtered = [...damagedItems];
+            if (catFilter !== 'all') filtered = filtered.filter(i => i.damageCategory === catFilter);
+            if (staffFilt)  filtered = filtered.filter(i => (i.damagedByStaff || '').toLowerCase().includes(staffFilt));
+            if (searchFilt) filtered = filtered.filter(i =>
+                (i.brand || '').toLowerCase().includes(searchFilt) ||
+                (i.itemName || '').toLowerCase().includes(searchFilt)
+            );
+            if (dateFrom) filtered = filtered.filter(i => (i.addedDate || '').slice(0,10) >= dateFrom);
+            if (dateTo)   filtered = filtered.filter(i => (i.addedDate || '').slice(0,10) <= dateTo);
+
+            // Sort newest first
+            filtered.sort((a, b) => new Date(b.addedDate) - new Date(a.addedDate));
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><div>No damaged items found</div></td></tr>';
+                return;
+            }
+
+            const catLabel = (cat) => {
+                if (cat === 'staff')    return '<span class="badge" style="background:#7c3aed;color:white;font-size:0.75rem;">👤 Staff</span>';
+                if (cat === 'customer') return '<span class="badge" style="background:#0369a1;color:white;font-size:0.75rem;">🛒 Customer</span>';
+                if (cat === 'supplier') return '<span class="badge" style="background:#065f46;color:white;font-size:0.75rem;">🚚 Supplier</span>';
+                return '<span class="badge" style="background:#6b7280;color:white;font-size:0.75rem;">Unknown</span>';
+            };
+
+            const statusLabel = (item) => {
+                if (item.status === 'expiry-area') return '<span class="badge badge-danger" style="font-size:0.75rem;">📦 Expiry Area</span>';
+                if (item.status === 'returned')    return '<span class="badge badge-success" style="font-size:0.75rem;">✅ Returned</span>';
+                if (item.status === 'discarded')   return '<span class="badge" style="background:#6b7280;color:white;font-size:0.75rem;">🗑️ Discarded</span>';
+                return '<span class="badge badge-warning" style="font-size:0.75rem;">On Shelf</span>';
+            };
+
+            tbody.innerHTML = filtered.map(item => `
+                <tr>
+                    <td>${item.brand}</td>
+                    <td>${item.itemName || '-'}</td>
+                    <td>₹${item.mrp}</td>
+                    <td>${item.quantity}</td>
+                    <td><strong>₹${((parseFloat(item.mrp)||0)*(parseFloat(item.quantity)||0)).toFixed(2)}</strong></td>
+                    <td>${catLabel(item.damageCategory)}</td>
+                    <td style="color:#7c3aed; font-weight:${item.damageCategory==='staff'?'700':'400'};">${item.damageCategory==='staff' ? (item.damagedByStaff || '-') : '-'}</td>
+                    <td style="max-width:160px; word-break:break-word;">${item.damageReason || '-'}</td>
+                    <td>${item.addedBy || '-'}</td>
+                    <td>${item.addedDate ? new Date(item.addedDate).toLocaleDateString() : '-'}</td>
+                    <td>${statusLabel(item)}</td>
+                </tr>
+            `).join('');
         }
 
         // Update Sold Items view
@@ -3105,6 +3657,64 @@
                         <td><span class="badge ${badgeClass}">${daysLeft} days</span></td>
                         <td>${item.soldBy || '-'}</td>
                         <td>${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update discarded items view
+        function updateDiscardedView() {
+            const tbody = document.getElementById('discarded-items-list');
+            if (!tbody) return;
+
+            const brandFilterInput = document.getElementById('discarded-brand-filter');
+            const brandFilter = brandFilterInput ? brandFilterInput.value.trim() : '';
+            const searchFilter = (document.getElementById('discarded-search-filter')?.value || '').toLowerCase();
+            const sortFilter = document.getElementById('discarded-sort-filter')?.value || 'discarded-desc';
+            const dateFrom = document.getElementById('discarded-date-from')?.value || '';
+            const dateTo = document.getElementById('discarded-date-to')?.value || '';
+
+            let discardedItems = items.filter(i => i.status === 'discarded');
+
+            // Update stat cards (always from all discarded, not filtered)
+            const discardedCountEl = document.getElementById('discarded-total-count');
+            const discardedValueEl = document.getElementById('discarded-total-value');
+            if (discardedCountEl) discardedCountEl.textContent = discardedItems.length;
+            if (discardedValueEl) discardedValueEl.textContent = '₹' + discardedItems.reduce((sum, i) => sum + (parseFloat(i.mrp) * parseFloat(i.quantity) || 0), 0).toLocaleString();
+
+            // Apply filters
+            if (brandFilter) discardedItems = discardedItems.filter(i => i.brand === brandFilter);
+            if (searchFilter) discardedItems = discardedItems.filter(i =>
+                (i.itemName || '').toLowerCase().includes(searchFilter) || i.brand.toLowerCase().includes(searchFilter)
+            );
+            if (dateFrom) discardedItems = discardedItems.filter(i => i.discardedDate && i.discardedDate.slice(0, 10) >= dateFrom);
+            if (dateTo) discardedItems = discardedItems.filter(i => i.discardedDate && i.discardedDate.slice(0, 10) <= dateTo);
+
+            // Sort
+            discardedItems.sort((a, b) => {
+                if (sortFilter === 'discarded-desc') return new Date(b.discardedDate) - new Date(a.discardedDate);
+                if (sortFilter === 'discarded-asc') return new Date(a.discardedDate) - new Date(b.discardedDate);
+                if (sortFilter === 'expiry-asc') return new Date(a.expiryDate) - new Date(b.expiryDate);
+                if (sortFilter === 'brand') return a.brand.localeCompare(b.brand);
+                return 0;
+            });
+
+            if (discardedItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div>No discarded items</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = discardedItems.map(item => {
+                return `
+                    <tr>
+                        <td>${item.brand}</td>
+                        <td>${item.itemName || '-'}</td>
+                        <td>₹${item.mrp}</td>
+                        <td>${item.quantity}</td>
+                        <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
+                        <td style="max-width:150px; word-break:break-word;">${item.discardReason || '-'}</td>
+                        <td>${item.discardedBy || '-'}</td>
+                        <td>${item.discardedDate ? new Date(item.discardedDate).toLocaleDateString() : '-'}</td>
                     </tr>
                 `;
             }).join('');
@@ -3171,7 +3781,9 @@
             updateCriticalView();
             updateAlreadyExpiredView();
             updateExpiryAreaView();
+            updateDamagedView();
             updateSoldView();
+            updateDiscardedView();
             updateAnalyticsView();
             updateReportsView();
             updateBrandsList();
@@ -3192,7 +3804,9 @@
             updateCriticalView();
             updateAlreadyExpiredView();
             updateExpiryAreaView();
+            updateDamagedView();
             updateSoldView();
+            updateDiscardedView();
             updateAnalyticsView();
             updateReportsView();
             updateStats();
@@ -3629,6 +4243,9 @@
             
             // Update overall trend view
             updateOverallTrendView();
+            
+            // Update discarded items loss trend
+            updateDiscardTrendChart();
         }
         
         // Helper function to get week start (Monday)
@@ -3639,7 +4256,124 @@
             return new Date(d.setDate(diff));
         }
 
-        // Update master data view
+        // ===== DISCARDED ITEMS TREND =====
+        function changeDiscardTrendView(view) {
+            discardTrendView = view;
+            discardTrendOffset = 0;
+            ['day','week','month'].forEach(v => {
+                const btn = document.getElementById(`discard-trend-${v}-btn`);
+                if (btn) btn.className = v === view ? 'btn btn-primary' : 'btn';
+            });
+            updateDiscardTrendChart();
+        }
+
+        function scrollDiscardTrend(direction) {
+            if (direction === 'prev') discardTrendOffset++;
+            else if (direction === 'next' && discardTrendOffset > 0) discardTrendOffset--;
+            updateDiscardTrendChart();
+        }
+
+        function updateDiscardTrendChart() {
+            const discardedItems = items.filter(i => i.status === 'discarded' && i.discardedDate);
+            const today = new Date();
+            let startDate, endDate, periods;
+
+            if (discardTrendView === 'day') {
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setDate(endDate.getDate() - discardTrendOffset * periods);
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - (periods - 1));
+            } else if (discardTrendView === 'week') {
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setDate(endDate.getDate() - discardTrendOffset * periods * 7);
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - (periods - 1) * 7);
+            } else {
+                periods = 7;
+                endDate = new Date(today);
+                endDate.setMonth(endDate.getMonth() - discardTrendOffset * periods);
+                startDate = new Date(endDate);
+                startDate.setMonth(startDate.getMonth() - (periods - 1));
+            }
+
+            const rangeEl = document.getElementById('discard-trend-range-display');
+            if (rangeEl) rangeEl.textContent = `${startDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} – ${endDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+
+            // Build period buckets
+            const periodData = {};
+            const cur = new Date(startDate);
+            while (cur <= endDate) {
+                const key = getPeriodKey(cur, discardTrendView);
+                if (!periodData[key]) {
+                    periodData[key] = { count: 0, qty: 0, value: 0, date: new Date(cur) };
+                }
+                if (discardTrendView === 'day')        cur.setDate(cur.getDate() + 1);
+                else if (discardTrendView === 'week')  cur.setDate(cur.getDate() + 7);
+                else                                   cur.setMonth(cur.getMonth() + 1);
+            }
+
+            // Sum discarded items into periods by discardedDate
+            discardedItems.forEach(item => {
+                const d = new Date(item.discardedDate);
+                const key = getPeriodKey(d, discardTrendView);
+                if (periodData[key]) {
+                    periodData[key].count++;
+                    periodData[key].qty   += parseFloat(item.quantity) || 0;
+                    periodData[key].value += (parseFloat(item.mrp) * parseFloat(item.quantity)) || 0;
+                }
+            });
+
+            const sortedKeys = Object.keys(periodData).sort();
+            const maxVal = Math.max(...sortedKeys.map(k => periodData[k].value), 1);
+
+            // Chart
+            const chartEl = document.getElementById('discard-trend-chart');
+            if (chartEl) {
+                if (sortedKeys.length === 0) {
+                    chartEl.innerHTML = '<div class="empty-state">No discarded items in this period</div>';
+                } else {
+                    const barWidth = Math.max(40, 600 / sortedKeys.length);
+                    chartEl.innerHTML = `
+                        <div class="chart-wrapper">
+                            ${sortedKeys.map(key => {
+                                const d = periodData[key];
+                                const height = maxVal > 0 ? (d.value / maxVal) * 200 : 0;
+                                const label = formatPeriodLabel(d.date, discardTrendView);
+                                return `
+                                    <div class="chart-bar" style="height:${height}px; width:${barWidth}px; background: linear-gradient(to top, #dc2626, #f87171);">
+                                        <div class="chart-value" style="color:#991b1b;">₹${d.value.toFixed(0)}</div>
+                                        <div class="chart-label">${label}</div>
+                                    </div>`;
+                            }).join('')}
+                        </div>`;
+                }
+            }
+
+            // Table
+            const tbody = document.getElementById('discard-period-breakdown');
+            if (tbody) {
+                if (sortedKeys.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div>No data</div></td></tr>';
+                } else {
+                    tbody.innerHTML = sortedKeys.map(key => {
+                        const d = periodData[key];
+                        const label = formatPeriodLabel(d.date, discardTrendView);
+                        return `
+                            <tr>
+                                <td>${label}</td>
+                                <td>${d.count}</td>
+                                <td>${d.qty}</td>
+                                <td><strong style="color:#dc2626;">₹${d.value.toFixed(2)}</strong></td>
+                            </tr>`;
+                    }).join('');
+                }
+            }
+
+            const nextBtn = document.getElementById('discard-trend-next-btn');
+            if (nextBtn) nextBtn.disabled = discardTrendOffset === 0;
+        }
         function updateMasterDataView() {
             const tbody = document.getElementById('master-data-items');
             const statusFilter = document.getElementById('status-filter').value;
@@ -3650,8 +4384,12 @@
             // Filter items
             let filteredItems = items;
             
-            if (statusFilter === 'damaged-in-expiry') {
-                filteredItems = filteredItems.filter(item => item.status === 'expiry-area' && item.isDamaged);
+            if (statusFilter === 'expiry-only') {
+                // Expiry Area items that are NOT damaged
+                filteredItems = filteredItems.filter(item => item.status === 'expiry-area' && !item.isDamaged);
+            } else if (statusFilter === 'damage-only') {
+                // All damaged items regardless of status
+                filteredItems = filteredItems.filter(item => item.isDamaged);
             } else if (statusFilter !== 'all') {
                 filteredItems = filteredItems.filter(item => item.status === statusFilter);
             }
@@ -3669,9 +4407,10 @@
             
             // Update stats
             document.getElementById('total-items-tracked').textContent = items.length;
-            document.getElementById('active-items').textContent = items.filter(i => i.status !== 'returned' && i.status !== 'sold').length;
+            document.getElementById('active-items').textContent = items.filter(i => i.status !== 'returned' && i.status !== 'sold' && i.status !== 'discarded').length;
             document.getElementById('returned-items').textContent = items.filter(i => i.status === 'returned').length;
             document.getElementById('sold-items-count').textContent = items.filter(i => i.status === 'sold').length;
+            document.getElementById('discarded-items-count').textContent = items.filter(i => i.status === 'discarded').length;
             
             if (filteredItems.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="18" class="empty-state"><div>No items found</div></td></tr>';
@@ -3687,13 +4426,29 @@
                 const statusBadge = item.status === 'upcoming' ? 'badge-warning' : 
                                    item.status === 'expiry-area' ? 'badge-danger' :
                                    item.status === 'sold' ? 'badge-success' : 'badge-success';
-                const statusText = item.status === 'upcoming' ? 'On Shelf' : 
-                                  item.status === 'expiry-area' ? 'Expiry Area' : 
-                                  item.status === 'sold' ? '✅ Sold' : 'Returned';
+                
+                // Priority: Show Damage category for damaged items, regardless of status
+                let statusText, statusBadgeClass;
+                if (item.isDamaged) {
+                    statusText = '🔶 Damage';
+                    statusBadgeClass = 'badge-damaged';
+                } else if (item.status === 'upcoming') {
+                    statusText = 'On Shelf';
+                    statusBadgeClass = 'badge-warning';
+                } else if (item.status === 'expiry-area') {
+                    statusText = 'Expiry Area';
+                    statusBadgeClass = 'badge-danger';
+                } else if (item.status === 'sold') {
+                    statusText = '✅ Sold';
+                    statusBadgeClass = 'badge-success';
+                } else {
+                    statusText = 'Returned';
+                    statusBadgeClass = 'badge-success';
+                }
                 
                 // Show appropriate action buttons
                 let actionButton = '';
-                if (item.status !== 'returned' && item.status !== 'sold') {
+                if (item.status !== 'returned' && item.status !== 'sold' && item.status !== 'discarded') {
                     if (currentUser.role === 'admin') {
                         actionButton = `
                             <button class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; margin-right: 0.5rem;" onclick="editItem('${item.id}')">Edit</button>
@@ -3717,7 +4472,7 @@
                         <td>₹${item.mrp}</td>
                         <td>${item.quantity}</td>
                         <td>${new Date(item.expiryDate).toLocaleDateString()}</td>
-                        <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                        <td><span class="badge ${statusBadgeClass}">${statusText}</span></td>
                         <td>${damagedBadge}</td>
                         <td style="max-width:150px; word-break:break-word;">${item.isDamaged ? (item.damageReason || '-') : '-'}</td>
                         <td>${item.addedBy}</td>
@@ -3729,6 +4484,9 @@
                         <td>${item.soldBy || '-'}</td>
                         <td>${item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
                         <td>${item.daysRemainingAtSale !== undefined ? item.daysRemainingAtSale + ' days' : '-'}</td>
+                        <td>${item.discardedBy || '-'}</td>
+                        <td>${item.discardedDate ? new Date(item.discardedDate).toLocaleDateString() : '-'}</td>
+                        <td style="max-width:150px; word-break:break-word;">${item.discardReason || '-'}</td>
                         <td>${actionButton}</td>
                     </tr>
                 `;
@@ -3743,7 +4501,8 @@
             }
             
             const headers = ['Brand', 'Item Name', 'MRP', 'Quantity', 'Expiry Date', 'Status', 'Damaged', 'Damage Reason',
-                           'Added By', 'Added Date', 'Moved By', 'Moved Date', 'Returned By', 'Returned Date', 'Sold By', 'Sold Date', 'Days Left at Sale'];
+                           'Added By', 'Added Date', 'Moved By', 'Moved Date', 'Returned By', 'Returned Date', 'Sold By', 'Sold Date', 'Days Left at Sale',
+                           'Discarded By', 'Discarded Date', 'Discard Reason'];
             
             const rows = items.map(item => [
                 item.brand,
@@ -3751,7 +4510,10 @@
                 item.mrp,
                 item.quantity,
                 item.expiryDate,
-                item.status === 'upcoming' ? 'On Shelf' : item.status === 'expiry-area' ? 'Expiry Area' : item.status === 'sold' ? 'Sold' : 'Returned',
+                item.status === 'upcoming' ? 'On Shelf' : 
+                item.status === 'expiry-area' ? 'Expiry Area' : 
+                item.status === 'sold' ? 'Sold' : 
+                item.status === 'discarded' ? 'Discarded' : 'Returned',
                 item.isDamaged ? 'Yes' : 'No',
                 item.damageReason || '',
                 item.addedBy,
@@ -3762,7 +4524,10 @@
                 item.returnedDate ? new Date(item.returnedDate).toLocaleDateString() : '',
                 item.soldBy || '',
                 item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '',
-                item.daysRemainingAtSale !== undefined ? item.daysRemainingAtSale : ''
+                item.daysRemainingAtSale !== undefined ? item.daysRemainingAtSale : '',
+                item.discardedBy || '',
+                item.discardedDate ? new Date(item.discardedDate).toLocaleDateString() : '',
+                item.discardReason || ''
             ]);
             
             const csv = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
@@ -4236,8 +5001,11 @@
                     <td>${item.movedBy}</td>
                     <td>${new Date(item.movedDate).toLocaleDateString()}</td>
                     <td>
-                        <button class="btn btn-success" onclick="markReturned('${item.id}')">
+                        <button class="btn btn-success" style="font-size:0.85rem; margin-right:0.5rem;" onclick="markReturned('${item.id}')">
                             Mark as Returned
+                        </button>
+                        <button class="btn" style="font-size:0.85rem; background:#6b7280; color:white;" onclick="markDiscarded('${item.id}')">
+                            🗑️ Discard
                         </button>
                     </td>
                 </tr>
@@ -4269,14 +5037,14 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Item Name</th>
-                                    <th>MRP</th>
-                                    <th>Quantity</th>
-                                    <th>Expiry Date</th>
-                                    <th>Type</th>
-                                    <th>Damage Reason</th>
-                                    <th>Moved By</th>
-                                    <th>Moved Date</th>
+                                    <th>📝 Item Name</th>
+                                    <th>💰 MRP</th>
+                                    <th>📦 Qty</th>
+                                    <th>📅 Expiry Date</th>
+                                    <th>🔖 Type</th>
+                                    <th>💬 Damage Reason</th>
+                                    <th>👤 Moved By</th>
+                                    <th>📅 Moved Date</th>
                                 </tr>
                             </thead>
                             <tbody>
