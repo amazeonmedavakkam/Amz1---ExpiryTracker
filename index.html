@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
     EXPIRY TRACKER - PERFORMANCE OPTIMIZED VERSION
-    Version: 2.4 (February 2026)
+    Version: 3.0 (February 2026)
     
     NEW in v2.3:
     ✅ Analytics tab: Discarded Items Loss Trend chart (daily/weekly/monthly) with period breakdown table
@@ -80,9 +80,10 @@
         .header-content {
             display: flex;
             align-items: center;
-            gap: 2rem;
+            gap: 1.25rem;
             position: relative;
             z-index: 1;
+            flex-wrap: wrap;
         }
 
         .header-logo {
@@ -115,33 +116,58 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 1.5rem 2rem 2rem;
+        }
+        
+        .tab-content-area {
+            padding-top: 1.5rem;
+        }
+
+        /* =============================================
+           PRIMARY NAV — 5 grouped main tabs
+        ============================================= */
+        .nav-wrapper {
+            background: var(--card);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 4px 16px var(--shadow);
+            margin-bottom: 0;
+            overflow: visible;
+            position: sticky;
+            top: 0;
+            z-index: 200;
         }
 
         .tabs {
             display: flex;
-            gap: 0.25rem;
-            margin-bottom: 2rem;
+            gap: 0;
             border-bottom: 3px solid var(--border);
-            flex-wrap: wrap;
-            background: var(--card);
-            padding: 0.5rem;
-            border-radius: 12px 12px 0 0;
-            box-shadow: 0 2px 8px var(--shadow);
+            background: transparent;
+            padding: 0.5rem 0.5rem 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .tabs::-webkit-scrollbar { display: none; }
 
         .tab {
-            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.85rem 1.2rem;
             background: none;
             border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -3px;
             color: var(--text-light);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            border-radius: 8px;
+            transition: all 0.25s ease;
+            border-radius: 10px 10px 0 0;
             font-family: 'Gill Sans', 'Gill Sans MT', sans-serif;
+            white-space: nowrap;
+            flex-shrink: 0;
+            position: relative;
         }
 
         .tab:hover {
@@ -150,44 +176,226 @@
         }
 
         .tab.active {
-            color: white;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            box-shadow: 0 4px 12px var(--shadow-dark);
+            color: var(--primary-dark);
+            background: var(--bg-secondary);
+            border-bottom-color: var(--primary);
+            font-weight: 700;
         }
 
-        /* ===== ICON ENHANCEMENTS ===== */
-        .tab {
+        .tab .tab-arrow {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            transition: transform 0.2s;
+        }
+        .tab.active .tab-arrow,
+        .tab.dd-open .tab-arrow {
+            transform: rotate(180deg);
+            opacity: 1;
+        }
+
+        /* =============================================
+           SECONDARY SUB-TAB BAR
+        ============================================= */
+        .sub-tabs {
+            display: none;
+            gap: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .sub-tabs::-webkit-scrollbar { display: none; }
+        .sub-tabs.visible { display: flex; }
+
+        .sub-tab {
             display: flex;
             align-items: center;
             gap: 0.35rem;
+            padding: 0.55rem 1.1rem;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            color: var(--text-light);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Gill Sans', 'Gill Sans MT', sans-serif;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
-        
+        .sub-tab:hover {
+            border-color: var(--accent);
+            color: var(--primary);
+            background: #f0fdf4;
+        }
+        .sub-tab.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 3px 10px var(--shadow-dark);
+        }
+
+        /* =============================================
+           DROPDOWN MENU (Stock Movement / Insights)
+        ============================================= */
+        .dd-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            border: 1px solid var(--border);
+            padding: 0.4rem;
+            min-width: 220px;
+            z-index: 999;
+            animation: ddFadeIn 0.18s ease;
+        }
+        .dd-menu.open { display: block; }
+
+        @keyframes ddFadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .dd-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            transition: all 0.15s ease;
+            font-family: 'Gill Sans', 'Gill Sans MT', sans-serif;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .dd-item:hover {
+            background: var(--bg-secondary);
+            color: var(--primary);
+        }
+        .dd-item.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+        }
+
+        /* Tab group wrapper (for relative positioning of dropdown) */
+        .tab-group {
+            position: relative;
+        }
+
+        /* =============================================
+           ICON / CARD / LABEL ENHANCEMENTS
+        ============================================= */
         .card h2 {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-        
         .stat-card h3 {
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
         }
-        
         label {
             display: flex;
             align-items: center;
             gap: 0.35rem;
         }
-        
-        th {
-            white-space: nowrap;
+        th { white-space: nowrap; }
+        thead th { letter-spacing: 0.2px; }
+
+        /* =============================================
+           MOBILE — full redesign for clarity
+        ============================================= */
+        @media (max-width: 768px) {
+            body { font-size: 15px; }
+
+            .container { padding: 0.75rem; }
+
+            /* Header compact */
+            .header { padding: 1rem; }
+            .header h1 { font-size: 1.5rem; }
+            .header-logo { width: 110px; }
+            #user-info { font-size: 0.8rem; }
+            .header-content { gap: 0.75rem; }
+
+            /* Sticky nav */
+            .nav-wrapper { border-radius: 12px 12px 0 0; }
+
+            .tab { padding: 0.75rem 0.9rem; font-size: 0.82rem; gap: 0.3rem; }
+
+            .sub-tab { padding: 0.55rem 0.9rem; font-size: 0.8rem; }
+
+            /* Cards */
+            .card { padding: 1.25rem; border-radius: 12px; margin-bottom: 1rem; }
+            .card h2 { font-size: 1.2rem; }
+            .card:hover { transform: none; }
+
+            /* Stat cards — 2 per row on mobile */
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+                margin-bottom: 1.25rem;
+            }
+            .stat-card { padding: 1rem 1rem 1.25rem; border-radius: 12px; }
+            .stat-card h3 { font-size: 0.72rem; letter-spacing: 0.3px; margin-bottom: 0.4rem; }
+            .stat-card .value { font-size: 1.9rem; }
+            .stat-card:hover { transform: none; }
+
+            /* Tables — horizontal scroll, no truncation */
+            .table-container { max-height: 60vh; border-radius: 8px; }
+            td { padding: 0.85rem 0.75rem; font-size: 0.83rem; }
+            th { padding: 0.85rem 0.75rem; font-size: 0.78rem; }
+
+            /* Forms */
+            .form-grid { grid-template-columns: 1fr; gap: 0.85rem; }
+            input, select { padding: 0.85rem; font-size: 1rem; border-radius: 8px; }
+            label { font-size: 0.85rem; }
+
+            /* Buttons */
+            .btn { padding: 0.85rem 1.25rem; font-size: 0.9rem; border-radius: 9px; }
+            .btn-danger, .btn-success { padding: 0.7rem 1rem; font-size: 0.83rem; }
+
+            /* Alerts */
+            .alert { padding: 0.85rem; font-size: 0.88rem; }
+
+            /* Filter rows — vertical stack */
+            .card > div[style*="display: flex"][style*="flex-wrap: wrap"] {
+                flex-direction: column !important;
+            }
+
+            /* Header action buttons compact */
+            .header-content > div:last-child { margin-left: 0; }
+            .header-content > div:last-child .btn { padding: 0.45rem 0.7rem; font-size: 0.78rem; }
+
+            /* WhatsApp modal full-screen */
+            #whatsapp-modal > div { max-width: 100%; margin: 0.5rem; border-radius: 12px; }
         }
-        
-        /* Icon in table headers */
-        thead th {
-            letter-spacing: 0.2px;
+
+
+        @media (max-width: 480px) {
+            .btn-label { display: none; }
+            .header p { font-size: 0.78rem; }
+        }
+        @media (max-width: 420px) {
+            .header-logo { display: none; }
+            .tab { padding: 0.65rem 0.65rem; font-size: 0.78rem; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .stat-card .value { font-size: 1.7rem; }
+            .btn { font-size: 0.85rem; }
+            /* Dropdown menu full width on tiny screens */
+            .dd-menu { left: auto; right: 0; min-width: 200px; }
         }
 
 
@@ -349,9 +557,9 @@
         }
 
         .alert-warning {
-            background: #fef3c7;
-            color: #92400e;
-            border-left: 4px solid var(--primary);
+            background: #fffbeb;
+            color: #78350f;
+            border-left: 4px solid #f59e0b;
         }
 
         .table-container {
@@ -442,40 +650,93 @@
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            gap: 1.25rem;
             margin-bottom: 2rem;
         }
 
+        /* ===== STAT CARDS — clean, high-contrast design ===== */
         .stat-card {
-            background: linear-gradient(135deg, white 0%, var(--bg-secondary) 100%);
-            padding: 2rem;
+            background: #ffffff;
+            padding: 1.5rem 1.75rem 1.75rem;
             border-radius: 16px;
-            box-shadow: 0 4px 16px var(--shadow);
-            border-left: 5px solid var(--accent);
-            transition: all 0.3s ease;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+            border-top: 4px solid var(--accent);
+            border-left: none;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
         }
 
         .stat-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 8px 32px var(--shadow-dark);
-            border-left-width: 8px;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.13);
         }
 
         .stat-card h3 {
-            font-size: 0.9rem;
-            color: var(--text-light);
-            margin-bottom: 0.75rem;
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-bottom: 0.6rem;
             font-weight: 600;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
         }
 
         .stat-card .value {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 2.4rem;
+            font-weight: 800;
             font-family: 'Gill Sans', 'Gill Sans MT', serif;
-            color: var(--primary);
-            text-shadow: 2px 2px 4px var(--shadow);
+            color: var(--primary-dark);
+            line-height: 1;
         }
+
+        /* Coloured stat card variants — accent stripe only, white bg */
+        .stat-card.sc-danger  { border-top-color: #dc2626; }
+        .stat-card.sc-danger  .value { color: #b91c1c; }
+        .stat-card.sc-danger::before { background: linear-gradient(90deg,#b91c1c,#ef4444); }
+
+        .stat-card.sc-orange  { border-top-color: #ea580c; }
+        .stat-card.sc-orange  .value { color: #c2410c; }
+        .stat-card.sc-orange::before { background: linear-gradient(90deg,#c2410c,#f97316); }
+
+        .stat-card.sc-amber   { border-top-color: #d97706; }
+        .stat-card.sc-amber   .value { color: #92400e; }
+        .stat-card.sc-amber::before  { background: linear-gradient(90deg,#92400e,#f59e0b); }
+
+        .stat-card.sc-slate   { border-top-color: #475569; }
+        .stat-card.sc-slate   .value { color: #334155; }
+        .stat-card.sc-slate::before  { background: linear-gradient(90deg,#334155,#94a3b8); }
+
+        .stat-card.sc-purple  { border-top-color: #7c3aed; }
+        .stat-card.sc-purple  .value { color: #5b21b6; }
+        .stat-card.sc-purple::before { background: linear-gradient(90deg,#5b21b6,#a78bfa); }
+
+        .stat-card.sc-blue    { border-top-color: #0369a1; }
+        .stat-card.sc-blue    .value { color: #075985; }
+        .stat-card.sc-blue::before   { background: linear-gradient(90deg,#075985,#38bdf8); }
+
+        .stat-card.sc-teal    { border-top-color: #0d9488; }
+        .stat-card.sc-teal    .value { color: #0f766e; }
+        .stat-card.sc-teal::before   { background: linear-gradient(90deg,#0f766e,#2dd4bf); }
+
+        .stat-card.sc-green   { border-top-color: var(--primary); }
+        .stat-card.sc-green   .value { color: var(--primary-dark); }
+
+        .stat-card small {
+            color: #64748b;
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 0.35rem;
+            font-weight: 500;
+        }
+        .stat-card.sc-green::before  { background: linear-gradient(90deg,var(--primary-dark),var(--accent)); }
 
         .empty-state {
             text-align: center;
@@ -752,35 +1013,77 @@
             <img src="Logo_HD.jpg" alt="Amaze On Logo" class="header-logo" id="header-logo">
             <div class="header-text">
                 <h1>⏰ Expiry Tracker</h1>
+                <p id="user-info" style="font-size:0.85rem; opacity:0.9; margin-top:0.2rem;"></p>
             </div>
-            <div style="text-align: right; margin-left: auto;">
-                <div style="font-size: 0.9rem; margin-bottom: 0.5rem;">
-                    <span id="user-info"></span>
-                    <span id="sync-status" style="margin-left: 1rem; font-size: 0.8rem; opacity: 0.8;"></span>
-                </div>
-                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                    <button onclick="openWhatsAppShare()" class="btn" style="background: #25D366; color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Share priority actions to WhatsApp">📲 WhatsApp</button>
-                    <button onclick="changeName()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; font-size: 0.85rem;" title="Change your name">👤 Change Name</button>
+            <div style="margin-left: auto; display:flex; flex-direction:column; align-items:flex-end; gap:0.4rem;">
+                <span id="sync-status" style="font-size: 0.78rem; opacity: 0.85;"></span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="openWhatsAppShare()" class="btn" style="background: #25D366; color: white; padding: 0.5rem 0.85rem; font-size: 0.82rem;" title="Share to WhatsApp">📲 <span class="btn-label">WhatsApp</span></button>
+                    <button onclick="changeName()" class="btn" style="background: rgba(255,255,255,0.18); color: white; border: 1.5px solid rgba(255,255,255,0.35); padding: 0.5rem 0.85rem; font-size: 0.82rem;" title="Change your name">👤 <span class="btn-label">Change Name</span></button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="container">
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('add')">➕ Add Items</button>
-            <button class="tab" onclick="switchTab('brand-master')">🏷️ Brand Master</button>
-            <button class="tab" onclick="switchTab('master-data')">📋 Master Data</button>
-            <button class="tab" onclick="switchTab('upcoming')">📅 Upcoming Expiries</button>
-            <button class="tab" onclick="switchTab('critical')">🔴 Critical (7 Days)</button>
-            <button class="tab" onclick="switchTab('already-expired')">☠️ Already Expired</button>
-            <button class="tab" onclick="switchTab('expiry-area')">📦 Expiry Area</button>
-            <button class="tab" onclick="switchTab('damaged-items')" id="damaged-items-tab-btn">🔶 Damaged Items</button>
-            <button class="tab" onclick="switchTab('sold')">✅ Sold Items</button>
-            <button class="tab" onclick="switchTab('discarded')">🗑️ Discarded</button>
-            <button class="tab" onclick="switchTab('analytics')">📊 Analytics</button>
-            <button class="tab" onclick="switchTab('reports')">📄 Reports</button>
+        <!-- ===== GROUPED NAVIGATION ===== -->
+        <div class="nav-wrapper">
+            <!-- Primary tab bar (5 groups) -->
+            <div class="tabs" id="main-tabs">
+                <!-- Group 1: Add / Setup -->
+                <div class="tab-group">
+                    <button class="tab active" id="grp-add" onclick="switchGroup('add')">
+                        ➕ Add / Setup
+                    </button>
+                </div>
+                <!-- Group 2: Master Data -->
+                <div class="tab-group">
+                    <button class="tab" id="grp-master-data" onclick="switchGroup('master-data')">
+                        📋 Master Data
+                    </button>
+                </div>
+                <!-- Group 3: Expiry Status -->
+                <div class="tab-group">
+                    <button class="tab" id="grp-expiry-status" onclick="switchGroup('expiry-status')">
+                        📅 Expiry Status <span class="tab-arrow">▾</span>
+                    </button>
+                </div>
+                <!-- Group 4: Stock Movement (dropdown) -->
+                <div class="tab-group">
+                    <button class="tab" id="grp-stock" onclick="toggleDropdown('stock-dd', 'grp-stock')">
+                        📦 Stock Movement <span class="tab-arrow">▾</span>
+                    </button>
+                    <div class="dd-menu" id="stock-dd">
+                        <button class="dd-item" onclick="switchFromDropdown('expiry-area','stock-dd','grp-stock')">📦 Expiry Area</button>
+                        <button class="dd-item" onclick="switchFromDropdown('damaged-items','stock-dd','grp-stock')">🔶 Damaged Items</button>
+                        <button class="dd-item" onclick="switchFromDropdown('sold','stock-dd','grp-stock')">✅ Sold Items</button>
+                        <button class="dd-item" onclick="switchFromDropdown('discarded','stock-dd','grp-stock')">🗑️ Discarded</button>
+                    </div>
+                </div>
+                <!-- Group 5: Insights (dropdown) -->
+                <div class="tab-group">
+                    <button class="tab" id="grp-insights" onclick="toggleDropdown('insights-dd', 'grp-insights')">
+                        📊 Insights <span class="tab-arrow">▾</span>
+                    </button>
+                    <div class="dd-menu" id="insights-dd">
+                        <button class="dd-item" onclick="switchFromDropdown('analytics','insights-dd','grp-insights')">📊 Analytics</button>
+                        <button class="dd-item" onclick="switchFromDropdown('reports','insights-dd','grp-insights')">📄 Reports</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-tab bars (shown conditionally) -->
+            <div class="sub-tabs" id="sub-add">
+                <button class="sub-tab active" id="sub-add-item" onclick="switchSubTab('add','add')">➕ Add Item</button>
+                <button class="sub-tab" id="sub-brand-master" onclick="switchSubTab('add','brand-master')">🏷️ Brand Master</button>
+            </div>
+            <div class="sub-tabs" id="sub-expiry-status">
+                <button class="sub-tab active" id="sub-upcoming" onclick="switchSubTab('expiry-status','upcoming')">📅 Upcoming</button>
+                <button class="sub-tab" id="sub-critical" onclick="switchSubTab('expiry-status','critical')">🔴 Critical (7 Days)</button>
+                <button class="sub-tab" id="sub-already-expired" onclick="switchSubTab('expiry-status','already-expired')">☠️ Already Expired</button>
+            </div>
         </div>
+        <div style="height:1.5rem;"></div>
 
         <!-- Add Items Tab -->
         <div id="add-tab" class="tab-content active">
@@ -940,11 +1243,11 @@
                     <h3>↩️ Returned Items</h3>
                     <div class="value" id="returned-items">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #1b4332, #2d6a4f);">
+                <div class="stat-card sc-green">
                     <h3>💰 Sold Items</h3>
                     <div class="value" id="sold-items-count">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #6b7280, #9ca3af);">
+                <div class="stat-card sc-slate">
                     <h3>🗑️ Discarded Items</h3>
                     <div class="value" id="discarded-items-count">0</div>
                 </div>
@@ -1024,7 +1327,7 @@
                     <h3>⚠️ Needs Attention</h3>
                     <div class="value" id="critical-count">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                <div class="stat-card sc-danger">
                     <h3>☠️ Already Expired</h3>
                     <div class="value" id="already-expired-count">0</div>
                 </div>
@@ -1086,23 +1389,23 @@
         <div id="damaged-items-tab" class="tab-content">
             <!-- Summary Stats -->
             <div class="stats">
-                <div class="stat-card" style="background: linear-gradient(135deg, #c2410c, #f97316);">
+                <div class="stat-card sc-orange">
                     <h3>🔶 Total Damaged</h3>
                     <div class="value" id="damaged-total-count">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #9a3412, #c2410c);">
+                <div class="stat-card sc-orange">
                     <h3>💰 Total Value (MRP × Qty)</h3>
                     <div class="value" id="damaged-total-value">₹0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
+                <div class="stat-card sc-purple">
                     <h3>👤 Staff Caused</h3>
                     <div class="value" id="damaged-by-staff-count">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #0369a1, #38bdf8);">
+                <div class="stat-card sc-blue">
                     <h3>🛒 Customer Caused</h3>
                     <div class="value" id="damaged-by-customer-count">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #065f46, #34d399);">
+                <div class="stat-card sc-teal">
                     <h3>🚚 Supplier Caused</h3>
                     <div class="value" id="damaged-by-supplier-count">0</div>
                 </div>
@@ -1174,15 +1477,15 @@
         <!-- Sold Items Tab -->
         <div id="sold-tab" class="tab-content">
             <div class="stats">
-                <div class="stat-card" style="background: linear-gradient(135deg, #1b4332, #2d6a4f);">
+                <div class="stat-card sc-green">
                     <h3>✅ Total Sold</h3>
                     <div class="value" id="sold-total-count">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #2d6a4f, #40916c);">
+                <div class="stat-card sc-green">
                     <h3>💰 Total Value (MRP × Qty)</h3>
                     <div class="value" id="sold-total-value">₹0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #40916c, #52b788);">
+                <div class="stat-card sc-green">
                     <h3>🏷️ Brands Sold</h3>
                     <div class="value" id="sold-total-brands">0</div>
                 </div>
@@ -1241,15 +1544,15 @@
         <!-- Discarded Items Tab -->
         <div id="discarded-tab" class="tab-content">
             <div class="stats">
-                <div class="stat-card" style="background: linear-gradient(135deg, #6b7280, #9ca3af);">
+                <div class="stat-card sc-slate">
                     <h3>🗑️ Total Discarded</h3>
                     <div class="value" id="discarded-total-count">0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #9ca3af, #d1d5db);">
+                <div class="stat-card sc-slate">
                     <h3>💰 Total Value (MRP × Qty)</h3>
                     <div class="value" id="discarded-total-value">₹0</div>
                 </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                <div class="stat-card sc-danger">
                     <h3>💸 Non-Returnable Loss</h3>
                     <div class="value" id="discarded-loss-indicator">🗑️</div>
                 </div>
@@ -2639,19 +2942,159 @@
         }
 
         // Tab switching (with auto-refresh)
-        async function switchTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tab + '-tab').classList.add('active');
-            
-            // Apply dual scrollbars to newly visible tab's tables
+        // ===== GROUPED NAVIGATION LOGIC =====
+
+        // Which main group → which sub-tab is currently active
+        const groupState = {
+            'add':           'add',           // default sub-tab
+            'expiry-status': 'upcoming',      // default sub-tab
+        };
+
+        // Map every leaf tab → its parent group
+        const tabToGroup = {
+            'add':            'add',
+            'brand-master':   'add',
+            'master-data':    'master-data',
+            'upcoming':       'expiry-status',
+            'critical':       'expiry-status',
+            'already-expired':'expiry-status',
+            'expiry-area':    'stock',
+            'damaged-items':  'stock',
+            'sold':           'stock',
+            'discarded':      'stock',
+            'analytics':      'insights',
+            'reports':        'insights',
+        };
+
+        // Groups that have sub-tab bars
+        const groupsWithSubTabs = ['add', 'expiry-status'];
+
+        // Groups that use dropdowns
+        const groupsWithDropdown = ['stock', 'insights'];
+
+        // Current active leaf tab
+        let currentLeafTab = 'add';
+
+        function showLeafTab(tabId) {
+            // Hide all tab-content divs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            // Show the target one
+            const el = document.getElementById(tabId + '-tab');
+            if (el) el.classList.add('active');
+            currentLeafTab = tabId;
             setTimeout(setupDualScrollbars, 50);
-            
-            // Refresh data when switching tabs for real-time updates
+        }
+
+        function setActiveMainTab(groupId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active', 'dd-open'));
+            const btn = document.getElementById('grp-' + groupId);
+            if (btn) btn.classList.add('active');
+        }
+
+        function showSubTabBar(groupId) {
+            // Hide all sub-tab bars
+            document.querySelectorAll('.sub-tabs').forEach(el => el.classList.remove('visible'));
+            if (groupsWithSubTabs.includes(groupId)) {
+                const bar = document.getElementById('sub-' + groupId);
+                if (bar) bar.classList.add('visible');
+            }
+        }
+
+        function setActiveSubTab(groupId, tabId) {
+            // Deactivate all sub-tabs in this group
+            const bar = document.getElementById('sub-' + groupId);
+            if (bar) bar.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+            // Activate the right one
+            const btn = document.getElementById('sub-' + tabId);
+            if (btn) btn.classList.add('active');
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dd-menu').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('dd-open'));
+        }
+
+        // Main group click — no dropdown
+        async function switchGroup(groupId) {
+            closeAllDropdowns();
+            setActiveMainTab(groupId);
+            showSubTabBar(groupId);
+
+            let leafTab;
+            if (groupsWithSubTabs.includes(groupId)) {
+                leafTab = groupState[groupId] || (groupId === 'add' ? 'add' : 'upcoming');
+                setActiveSubTab(groupId, leafTab);
+            } else {
+                leafTab = groupId; // e.g. 'master-data'
+            }
+            showLeafTab(leafTab);
             await autoRefreshData();
         }
+
+        // Toggle dropdown (Stock Movement / Insights)
+        function toggleDropdown(ddId, btnId) {
+            const menu = document.getElementById(ddId);
+            const btn  = document.getElementById(btnId);
+            const isOpen = menu.classList.contains('open');
+            closeAllDropdowns();
+            if (!isOpen) {
+                menu.classList.add('open');
+                if (btn) btn.classList.add('dd-open');
+            }
+        }
+
+        // Item chosen from dropdown
+        async function switchFromDropdown(tabId, ddId, grpBtnId) {
+            closeAllDropdowns();
+            showSubTabBar(''); // hide all sub bars
+            // Mark main group tab as active
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active', 'dd-open'));
+            const grpBtn = document.getElementById(grpBtnId);
+            if (grpBtn) grpBtn.classList.add('active');
+            // Highlight active dd item
+            const menu = document.getElementById(ddId);
+            if (menu) menu.querySelectorAll('.dd-item').forEach(it => {
+                it.classList.toggle('active', it.textContent.includes(tabId === 'expiry-area' ? 'Expiry Area'
+                    : tabId === 'damaged-items' ? 'Damaged'
+                    : tabId === 'sold' ? 'Sold'
+                    : tabId === 'discarded' ? 'Discarded'
+                    : tabId === 'analytics' ? 'Analytics' : 'Reports'));
+            });
+            showLeafTab(tabId);
+            await autoRefreshData();
+        }
+
+        // Sub-tab click (within Add/Setup or Expiry Status groups)
+        async function switchSubTab(groupId, tabId) {
+            groupState[groupId] = tabId;
+            setActiveSubTab(groupId, tabId);
+            showLeafTab(tabId);
+            await autoRefreshData();
+        }
+
+        // Legacy switchTab — kept for backward compat (any inline onclick still using it)
+        async function switchTab(tabId) {
+            const groupId = tabToGroup[tabId] || 'add';
+            if (groupsWithDropdown.includes(groupId)) {
+                await switchFromDropdown(tabId,
+                    groupId + '-dd',
+                    'grp-' + groupId);
+            } else if (groupsWithSubTabs.includes(groupId)) {
+                setActiveMainTab(groupId);
+                showSubTabBar(groupId);
+                groupState[groupId] = tabId;
+                setActiveSubTab(groupId, tabId);
+                showLeafTab(tabId);
+                await autoRefreshData();
+            } else {
+                await switchGroup(groupId);
+            }
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.tab-group')) closeAllDropdowns();
+        });
 
         // Update brand dropdown
         // Setup brand autocomplete (replaces dropdown)
