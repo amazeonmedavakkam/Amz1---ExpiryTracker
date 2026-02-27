@@ -243,16 +243,15 @@
         ============================================= */
         .dd-menu {
             display: none;
-            position: absolute;
-            top: calc(100% + 4px);
-            left: 0;
+            position: fixed;        /* fixed so .tabs overflow never clips it */
+            top: 0; left: 0;        /* actual position set by JS */
             background: white;
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.18);
             border: 1px solid var(--border);
             padding: 0.4rem;
-            min-width: 220px;
-            z-index: 999;
+            min-width: 200px;
+            z-index: 9999;
             animation: ddFadeIn 0.18s ease;
         }
         .dd-menu.open { display: block; }
@@ -3031,15 +3030,24 @@
             await autoRefreshData();
         }
 
-        // Toggle dropdown (Stock Movement / Insights)
+        // Toggle dropdown — position with fixed coords so overflow:auto can't clip it
         function toggleDropdown(ddId, btnId) {
             const menu = document.getElementById(ddId);
             const btn  = document.getElementById(btnId);
+            if (!menu || !btn) return;
             const isOpen = menu.classList.contains('open');
             closeAllDropdowns();
             if (!isOpen) {
+                // Position the fixed menu under the button
+                const rect = btn.getBoundingClientRect();
+                menu.style.top  = (rect.bottom + 4) + 'px';
+                // Align left edge to button, but clamp so it never overflows right edge
+                const menuW = 210;
+                let left = rect.left;
+                if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+                menu.style.left = left + 'px';
                 menu.classList.add('open');
-                if (btn) btn.classList.add('dd-open');
+                btn.classList.add('dd-open');
             }
         }
 
