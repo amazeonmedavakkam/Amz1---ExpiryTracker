@@ -1047,27 +1047,17 @@
                         📅 Expiry Status <span class="tab-arrow">▾</span>
                     </button>
                 </div>
-                <!-- Group 4: Stock Movement (dropdown) -->
+                <!-- Group 4: Stock Movement -->
                 <div class="tab-group">
-                    <button class="tab" id="grp-stock" onclick="toggleDropdown('stock-dd', 'grp-stock')">
-                        📦 Stock Movement <span class="tab-arrow">▾</span>
+                    <button class="tab" id="grp-stock" onclick="switchGroup('stock')">
+                        📦 Stock Movement
                     </button>
-                    <div class="dd-menu" id="stock-dd">
-                        <button class="dd-item" onclick="switchFromDropdown('expiry-area','stock-dd','grp-stock')">📦 Expiry Area</button>
-                        <button class="dd-item" onclick="switchFromDropdown('damaged-items','stock-dd','grp-stock')">🔶 Damaged Items</button>
-                        <button class="dd-item" onclick="switchFromDropdown('sold','stock-dd','grp-stock')">✅ Sold Items</button>
-                        <button class="dd-item" onclick="switchFromDropdown('discarded','stock-dd','grp-stock')">🗑️ Discarded</button>
-                    </div>
                 </div>
-                <!-- Group 5: Insights (dropdown) -->
+                <!-- Group 5: Insights -->
                 <div class="tab-group">
-                    <button class="tab" id="grp-insights" onclick="toggleDropdown('insights-dd', 'grp-insights')">
-                        📊 Insights <span class="tab-arrow">▾</span>
+                    <button class="tab" id="grp-insights" onclick="switchGroup('insights')">
+                        📊 Insights
                     </button>
-                    <div class="dd-menu" id="insights-dd">
-                        <button class="dd-item" onclick="switchFromDropdown('analytics','insights-dd','grp-insights')">📊 Analytics</button>
-                        <button class="dd-item" onclick="switchFromDropdown('reports','insights-dd','grp-insights')">📄 Reports</button>
-                    </div>
                 </div>
             </div>
 
@@ -1080,6 +1070,16 @@
                 <button class="sub-tab active" id="sub-upcoming" onclick="switchSubTab('expiry-status','upcoming')">📅 Upcoming</button>
                 <button class="sub-tab" id="sub-critical" onclick="switchSubTab('expiry-status','critical')">🔴 Critical (7 Days)</button>
                 <button class="sub-tab" id="sub-already-expired" onclick="switchSubTab('expiry-status','already-expired')">☠️ Already Expired</button>
+            </div>
+            <div class="sub-tabs" id="sub-stock">
+                <button class="sub-tab" id="sub-expiry-area" onclick="switchSubTab('stock','expiry-area')">📦 Expiry Area</button>
+                <button class="sub-tab" id="sub-damaged-items" onclick="switchSubTab('stock','damaged-items')">🔶 Damaged Items</button>
+                <button class="sub-tab" id="sub-sold" onclick="switchSubTab('stock','sold')">✅ Sold Items</button>
+                <button class="sub-tab" id="sub-discarded" onclick="switchSubTab('stock','discarded')">🗑️ Discarded</button>
+            </div>
+            <div class="sub-tabs" id="sub-insights">
+                <button class="sub-tab" id="sub-analytics" onclick="switchSubTab('insights','analytics')">📊 Analytics</button>
+                <button class="sub-tab" id="sub-reports" onclick="switchSubTab('insights','reports')">📄 Reports</button>
             </div>
         </div>
         <div style="height:1.5rem;"></div>
@@ -2945,8 +2945,10 @@
 
         // Which main group → which sub-tab is currently active
         const groupState = {
-            'add':           'add',           // default sub-tab
-            'expiry-status': 'upcoming',      // default sub-tab
+            'add':           'add',
+            'expiry-status': 'upcoming',
+            'stock':         'expiry-area',
+            'insights':      'analytics',
         };
 
         // Map every leaf tab → its parent group
@@ -2965,11 +2967,9 @@
             'reports':        'insights',
         };
 
-        // Groups that have sub-tab bars
-        const groupsWithSubTabs = ['add', 'expiry-status'];
-
-        // Groups that use dropdowns
-        const groupsWithDropdown = ['stock', 'insights'];
+        // ALL groups now use sub-tab bars (no more dropdowns)
+        const groupsWithSubTabs = ['add', 'expiry-status', 'stock', 'insights'];
+        const groupsWithDropdown = []; // none
 
         // Current active leaf tab
         let currentLeafTab = 'add';
@@ -3009,68 +3009,26 @@
         }
 
         function closeAllDropdowns() {
-            document.querySelectorAll('.dd-menu').forEach(m => m.classList.remove('open'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('dd-open'));
+            // No dropdown menus — just a no-op stub kept for safety
         }
 
-        // Main group click — no dropdown
+        // Main group click
         async function switchGroup(groupId) {
-            closeAllDropdowns();
             setActiveMainTab(groupId);
             showSubTabBar(groupId);
 
             let leafTab;
             if (groupsWithSubTabs.includes(groupId)) {
-                leafTab = groupState[groupId] || (groupId === 'add' ? 'add' : 'upcoming');
+                leafTab = groupState[groupId];
                 setActiveSubTab(groupId, leafTab);
             } else {
-                leafTab = groupId; // e.g. 'master-data'
+                leafTab = groupId; // 'master-data'
             }
             showLeafTab(leafTab);
             await autoRefreshData();
         }
 
-        // Toggle dropdown — position with fixed coords so overflow:auto can't clip it
-        function toggleDropdown(ddId, btnId) {
-            const menu = document.getElementById(ddId);
-            const btn  = document.getElementById(btnId);
-            if (!menu || !btn) return;
-            const isOpen = menu.classList.contains('open');
-            closeAllDropdowns();
-            if (!isOpen) {
-                // Position the fixed menu under the button
-                const rect = btn.getBoundingClientRect();
-                menu.style.top  = (rect.bottom + 4) + 'px';
-                // Align left edge to button, but clamp so it never overflows right edge
-                const menuW = 210;
-                let left = rect.left;
-                if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
-                menu.style.left = left + 'px';
-                menu.classList.add('open');
-                btn.classList.add('dd-open');
-            }
-        }
-
-        // Item chosen from dropdown
-        async function switchFromDropdown(tabId, ddId, grpBtnId) {
-            closeAllDropdowns();
-            showSubTabBar(''); // hide all sub bars
-            // Mark main group tab as active
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active', 'dd-open'));
-            const grpBtn = document.getElementById(grpBtnId);
-            if (grpBtn) grpBtn.classList.add('active');
-            // Highlight active dd item
-            const menu = document.getElementById(ddId);
-            if (menu) menu.querySelectorAll('.dd-item').forEach(it => {
-                it.classList.toggle('active', it.textContent.includes(tabId === 'expiry-area' ? 'Expiry Area'
-                    : tabId === 'damaged-items' ? 'Damaged'
-                    : tabId === 'sold' ? 'Sold'
-                    : tabId === 'discarded' ? 'Discarded'
-                    : tabId === 'analytics' ? 'Analytics' : 'Reports'));
-            });
-            showLeafTab(tabId);
-            await autoRefreshData();
-        }
+        // (Dropdowns removed — all groups now use sub-tab bars)
 
         // Sub-tab click (within Add/Setup or Expiry Status groups)
         async function switchSubTab(groupId, tabId) {
@@ -3080,14 +3038,10 @@
             await autoRefreshData();
         }
 
-        // Legacy switchTab — kept for backward compat (any inline onclick still using it)
+        // Legacy switchTab — routes to the right group/sub-tab
         async function switchTab(tabId) {
             const groupId = tabToGroup[tabId] || 'add';
-            if (groupsWithDropdown.includes(groupId)) {
-                await switchFromDropdown(tabId,
-                    groupId + '-dd',
-                    'grp-' + groupId);
-            } else if (groupsWithSubTabs.includes(groupId)) {
+            if (groupsWithSubTabs.includes(groupId)) {
                 setActiveMainTab(groupId);
                 showSubTabBar(groupId);
                 groupState[groupId] = tabId;
@@ -3099,10 +3053,7 @@
             }
         }
 
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.tab-group')) closeAllDropdowns();
-        });
+        // (No dropdowns to close)
 
         // Update brand dropdown
         // Setup brand autocomplete (replaces dropdown)
