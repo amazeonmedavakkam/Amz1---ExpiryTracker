@@ -2334,10 +2334,7 @@
                     alert('Please select a Damage Category.');
                     return;
                 }
-                if (isDamaged && !damageReason) {
-                    alert('Please enter a Damage Reason.');
-                    return;
-                }
+                // Damage reason is optional - removed mandatory check
                 if (isDamaged && damageCategory === 'staff' && !damagedByStaff) {
                     alert('Please enter the name of the staff responsible for the damage.');
                     return;
@@ -3823,14 +3820,14 @@
                     return;
                 }
 
-                // Optional reason
-                const reason = prompt('Reason for discarding (optional):\n\nExamples: Spoiled, Damaged beyond return, Health hazard, etc.', item.isDamaged ? (item.damageReason || '') : '') || 'Not specified';
+                // Optional reason (can be left blank)
+                const reason = prompt('Reason for discarding (optional - press OK without text to skip):\n\nExamples: Spoiled, Damaged beyond return, Health hazard, etc.', item.isDamaged ? (item.damageReason || '') : '');
                 
                 // Update item
                 item.status = 'discarded';
                 item.discardedBy = personName.trim();
                 item.discardedDate = new Date().toISOString();
-                item.discardReason = reason.trim();
+                item.discardReason = reason ? reason.trim() : '';
                 
                 updateItemViews();
                 alert('✅ Item marked as discarded (non-returnable).');
