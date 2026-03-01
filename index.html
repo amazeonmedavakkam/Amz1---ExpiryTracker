@@ -3823,19 +3823,34 @@
                 // Optional reason (can be left blank)
                 const reason = prompt('Reason for discarding (optional - press OK without text to skip):\n\nExamples: Spoiled, Damaged beyond return, Health hazard, etc.', item.isDamaged ? (item.damageReason || '') : '');
                 
-                // Update item
+                // Update item with all fields
+                const now = new Date().toISOString();
                 item.status = 'discarded';
                 item.discardedBy = personName.trim();
-                item.discardedDate = new Date().toISOString();
+                item.discardedDate = now;
                 item.discardReason = reason ? reason.trim() : '';
                 
-                updateItemViews();
-                alert('✅ Item marked as discarded (non-returnable).');
-                
-                saveItems().catch(error => {
-                    console.error('Background save failed:', error);
-                    alert('Warning: Item marked in app but may not be saved to server. Please check connection.');
+                console.log('Marking item as discarded:', {
+                    id: item.id,
+                    brand: item.brand,
+                    status: item.status,
+                    discardedBy: item.discardedBy,
+                    discardedDate: item.discardedDate,
+                    discardReason: item.discardReason
                 });
+                
+                // Update UI immediately
+                updateItemViews();
+                
+                // Save to server (await to ensure it completes)
+                try {
+                    await saveItems();
+                    console.log('✓ Discarded item saved successfully');
+                    alert('✅ Item marked as discarded (non-returnable).');
+                } catch (saveError) {
+                    console.error('Failed to save discarded item:', saveError);
+                    alert('⚠️ Item marked locally but failed to save to server. Please check your connection and try refreshing.');
+                }
                 
             } catch (error) {
                 console.error('Error marking discarded:', error);
@@ -4109,6 +4124,17 @@
             const dateTo = document.getElementById('discarded-date-to')?.value || '';
 
             let discardedItems = items.filter(i => i.status === 'discarded');
+            
+            console.log('Discarded items found:', discardedItems.length);
+            if (discardedItems.length > 0) {
+                console.log('Sample discarded item:', {
+                    brand: discardedItems[0].brand,
+                    status: discardedItems[0].status,
+                    discardedBy: discardedItems[0].discardedBy,
+                    discardedDate: discardedItems[0].discardedDate,
+                    discardReason: discardedItems[0].discardReason
+                });
+            }
 
             // Update stat cards (always from all discarded, not filtered)
             const discardedCountEl = document.getElementById('discarded-total-count');
@@ -4126,8 +4152,8 @@
 
             // Sort
             discardedItems.sort((a, b) => {
-                if (sortFilter === 'discarded-desc') return new Date(b.discardedDate) - new Date(a.discardedDate);
-                if (sortFilter === 'discarded-asc') return new Date(a.discardedDate) - new Date(b.discardedDate);
+                if (sortFilter === 'discarded-desc') return new Date(b.discardedDate || 0) - new Date(a.discardedDate || 0);
+                if (sortFilter === 'discarded-asc') return new Date(a.discardedDate || 0) - new Date(b.discardedDate || 0);
                 if (sortFilter === 'expiry-asc') return new Date(a.expiryDate) - new Date(b.expiryDate);
                 if (sortFilter === 'brand') return a.brand.localeCompare(b.brand);
                 return 0;
