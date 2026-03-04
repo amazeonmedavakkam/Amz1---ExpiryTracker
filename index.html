@@ -3926,22 +3926,8 @@
         async function deleteItem(id) {
             const item = items.find(i => i.id === id || String(i.id) === String(id));
             if (!item) { alert('Item not found.'); return; }
-            const confirm1 = confirm(
-                '⚠️ Delete this entry permanently?
-
-' +
-                'Brand: ' + item.brand + '
-' +
-                'Item: ' + (item.itemName || '-') + '
-' +
-                'MRP: ₹' + item.mrp + ' | Qty: ' + item.quantity + '
-' +
-                'Status: ' + item.status + '
-
-' +
-                'This cannot be undone.'
-            );
-            if (!confirm1) return;
+            const msg = '\u26a0\ufe0f Delete this entry permanently?\n\nBrand: ' + item.brand + '\nItem: ' + (item.itemName || '-') + '\nMRP: \u20b9' + item.mrp + ' | Qty: ' + item.quantity + '\nStatus: ' + item.status + '\n\nThis cannot be undone.';
+            if (!confirm(msg)) return;
             items = items.filter(i => String(i.id) !== String(id));
             updateItemViews();
             saveItems().catch(err => {
