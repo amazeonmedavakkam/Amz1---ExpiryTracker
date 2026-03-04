@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
-    EXPIRY TRACKER - PERFORMANCE OPTIMIZED VERSION
-    Version: 3.1 (February 2026)
+    EXPIRY TRACKER - v3.2
+    Version: 3.2 (March 2026)
     
     NEW in v2.3:
     ✅ Analytics tab: Discarded Items Loss Trend chart (daily/weekly/monthly) with period breakdown table
@@ -1180,8 +1180,8 @@
                                     <input type="text" id="damaged-by-staff" placeholder="Name of staff who caused damage" style="border-color: #f97316;">
                                 </div>
                                 <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label style="color: #f97316;">💬 Damage Reason *</label>
-                                    <input type="text" id="damage-reason" placeholder="e.g., Packaging torn, Dented can, Dropped by staff..." style="border-color: #f97316;">
+                                    <label style="color: #f97316;">💬 Damage Reason <span style="font-size:0.78rem; color:var(--text-muted); font-weight:400;">(Optional)</span></label>
+                                    <input type="text" id="damage-reason" placeholder="e.g., Packaging torn, Dented can, Dropped by staff... (leave blank if not known)" style="border-color: #f97316;">
                                     <small style="color: var(--text-light); font-size: 0.8rem; display: block; margin-top: 0.25rem;">
                                         Describe the damage. Will appear in the Damaged Items tab and all reports.
                                     </small>
@@ -1751,6 +1751,19 @@
         <div id="expiry-area-tab" class="tab-content">
             <div class="card">
                 <h2>📦 Items in Expiry Area</h2>
+
+                <!-- QUICK FIND — prominent search for ground staff returning items to supplier -->
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <span style="font-size: 1.6rem; flex-shrink: 0;">🔍</span>
+                    <div style="flex: 1; min-width: 260px;">
+                        <div style="font-weight: 700; color: #92400e; font-size: 1rem; margin-bottom: 0.4rem;">Quick Find — Brand or Item</div>
+                        <input type="text" id="expiry-area-quickfind" placeholder="Type brand name or item name to instantly find..." oninput="updateExpiryAreaView()" autocomplete="off"
+                            style="width: 100%; padding: 0.85rem 1rem; font-size: 1.05rem; border: 2px solid #f59e0b; border-radius: 10px; font-family: inherit; background: white; box-shadow: 0 2px 8px rgba(245,158,11,0.15);">
+                        <div style="font-size: 0.8rem; color: #92400e; margin-top: 0.35rem; opacity: 0.8;">Searches across brand name AND item name simultaneously</div>
+                    </div>
+                    <button onclick="document.getElementById('expiry-area-quickfind').value=''; updateExpiryAreaView();" style="background: #f59e0b; color: white; border: none; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✕ Clear</button>
+                </div>
+
                 <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <div class="form-group brand-autocomplete" style="flex: 1; min-width: 200px;">
                         <label>🏷️ Filter by Brand <span style="font-size: 0.8rem; color: var(--text-muted);">(Type to search)</span></label>
@@ -3909,6 +3922,34 @@
             }
         }
 
+        // ===== DELETE ITEM =====
+        async function deleteItem(id) {
+            const item = items.find(i => i.id === id || String(i.id) === String(id));
+            if (!item) { alert('Item not found.'); return; }
+            const confirm1 = confirm(
+                '⚠️ Delete this entry permanently?
+
+' +
+                'Brand: ' + item.brand + '
+' +
+                'Item: ' + (item.itemName || '-') + '
+' +
+                'MRP: ₹' + item.mrp + ' | Qty: ' + item.quantity + '
+' +
+                'Status: ' + item.status + '
+
+' +
+                'This cannot be undone.'
+            );
+            if (!confirm1) return;
+            items = items.filter(i => String(i.id) !== String(id));
+            updateItemViews();
+            saveItems().catch(err => {
+                console.error('Delete save failed:', err);
+                alert('⚠️ Deleted locally but failed to sync. Refresh to check.');
+            });
+        }
+
         // ===== DAMAGED ITEMS VIEW =====
         function updateDamagedView() {
             const damagedItems = items.filter(i => i.isDamaged);
@@ -4908,17 +4949,19 @@
                 
                 // Show appropriate action buttons
                 let actionButton = '';
+                const deleteBtn = `<button class="btn btn-danger" style="font-size: 0.8rem; padding: 0.4rem 0.7rem; margin-top:0.3rem;" onclick="deleteItem('${item.id}')" title="Delete this entry">🗑️ Delete</button>`;
                 if (item.status !== 'returned' && item.status !== 'sold' && item.status !== 'discarded') {
                     if (currentUser.role === 'admin') {
                         actionButton = `
                             <button class="btn btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1rem; margin-right: 0.5rem;" onclick="editItem('${item.id}')">Edit</button>
                             <button class="btn btn-danger" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="resetItemStatus('${item.id}')">Reset</button>
+                            <br>${deleteBtn}
                         `;
                     } else {
-                        actionButton = '-';
+                        actionButton = deleteBtn;
                     }
                 } else {
-                    actionButton = '-';
+                    actionButton = deleteBtn;
                 }
                 
                 const damagedBadge = item.isDamaged 
@@ -5221,9 +5264,14 @@
                         <td>${item.addedBy}</td>
                         <td><span class="badge badge-warning">On Shelf</span></td>
                         <td>
-                            <button class="btn btn-success" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap;" onclick="markAsSold('${itemId}')">
-                                ✅ Mark as Sold
-                            </button>
+                            <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                                <button class="btn btn-success" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap;" onclick="markAsSold('${itemId}')">
+                                    ✅ Mark as Sold
+                                </button>
+                                <button class="btn btn-danger" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap;" onclick="deleteItem('${itemId}')" title="Delete entry">
+                                    🗑️ Delete
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -5304,6 +5352,9 @@
                                 <button class="btn btn-success" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap;" onclick="markAsSold('${itemId}')">
                                     ✅ Mark as Sold
                                 </button>
+                                <button class="btn btn-danger" style="font-size:0.8rem; padding:0.35rem 0.75rem; white-space:nowrap; background:#6b7280;" onclick="deleteItem('${itemId}')" title="Delete entry">
+                                    🗑️ Delete
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -5379,9 +5430,14 @@
                         <td><span class="badge badge-danger">${daysOverdue} days overdue</span></td>
                         <td>${item.addedBy}</td>
                         <td>
-                            <button class="btn btn-danger" onclick="moveToExpiryArea('${itemId}')">
-                                Move to Expiry Area
-                            </button>
+                            <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                                <button class="btn btn-danger" onclick="moveToExpiryArea('${itemId}')">
+                                    Move to Expiry Area
+                                </button>
+                                <button class="btn btn-danger" style="background:#6b7280;" onclick="deleteItem('${itemId}')" title="Delete entry">
+                                    🗑️ Delete
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -5394,6 +5450,7 @@
             const brandFilterInput = document.getElementById('expiry-area-brand-filter');
             const brandFilter = brandFilterInput.value.trim();
             const searchFilter = document.getElementById('expiry-area-search-filter').value.toLowerCase();
+            const quickFind = (document.getElementById('expiry-area-quickfind')?.value || '').toLowerCase().trim();
             const sortFilter = document.getElementById('expiry-area-sort-filter').value;
             const dateFrom = document.getElementById('expiry-area-date-from').value;
             const dateTo = document.getElementById('expiry-area-date-to').value;
@@ -5403,6 +5460,14 @@
             
             // Filter items
             let filteredItems = expiryAreaItems;
+            
+            // Quick Find — searches brand + item name simultaneously
+            if (quickFind) {
+                filteredItems = filteredItems.filter(item =>
+                    item.brand.toLowerCase().includes(quickFind) ||
+                    (item.itemName || '').toLowerCase().includes(quickFind)
+                );
+            }
             
             if (brandFilter && brandFilter.length > 0) {
                 filteredItems = filteredItems.filter(item => item.brand === brandFilter);
@@ -5461,12 +5526,17 @@
                     <td>${item.movedBy}</td>
                     <td>${new Date(item.movedDate).toLocaleDateString()}</td>
                     <td>
-                        <button class="btn btn-success" style="font-size:0.85rem; margin-right:0.5rem;" onclick="markReturned('${item.id}')">
-                            Mark as Returned
-                        </button>
-                        <button class="btn" style="font-size:0.85rem; background:#6b7280; color:white;" onclick="markDiscarded('${item.id}')">
-                            🗑️ Discard
-                        </button>
+                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+                            <button class="btn btn-success" style="font-size:0.85rem;" onclick="markReturned('${item.id}')">
+                                ✅ Returned
+                            </button>
+                            <button class="btn" style="font-size:0.85rem; background:#6b7280; color:white;" onclick="markDiscarded('${item.id}')">
+                                🗑️ Discard
+                            </button>
+                            <button class="btn btn-danger" style="font-size:0.8rem; padding:0.35rem 0.6rem; background:#dc2626;" onclick="deleteItem('${item.id}')" title="Delete this entry permanently">
+                                ✕ Del
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `}).join('');
