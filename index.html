@@ -2174,7 +2174,7 @@
                         return await getAdminPassword();
                     }
                     
-                    // Show loading indicator
+                    // Fetch from server (SERVER IS SOURCE OF TRUTH)
                     const action = key === 'expiry-items' ? 'getItems' : 'getBrands';
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}&t=${Date.now()}`);
                     const data = await response.json();
@@ -2188,24 +2188,23 @@
                         }));
                     }
                     
-                    // Cache in localStorage
+                    // Cache in localStorage ONLY for offline fallback
                     localStorage.setItem(key, JSON.stringify(normalizedData));
-                    localStorage.setItem(key + '_timestamp', Date.now().toString());
                     
                     return normalizedData;
                 } catch (error) {
                     console.error('Error fetching from Google Sheets:', error);
                     
-                    // Special fallback for password — use dedicated function
+                    // Special fallback for password
                     if (key === 'admin-password') {
                         return await getAdminPassword();
                     }
                     
-                    // Fallback to localStorage cache
+                    // OFFLINE FALLBACK: Use localStorage cache only if server fetch failed
                     const localData = localStorage.getItem(key);
                     if (localData) {
+                        console.warn('Using offline cache for', key);
                         const parsedData = JSON.parse(localData);
-                        // Normalize IDs even from cache
                         if (Array.isArray(parsedData) && parsedData.length > 0) {
                             return parsedData.map(item => ({
                                 ...item,
@@ -2259,10 +2258,7 @@
                 try {
                     const action = key === 'expiry-items' ? 'saveItems' : 'saveBrands';
                     
-                    // Save to localStorage immediately for instant feedback
-                    localStorage.setItem(key, JSON.stringify(value));
-                    
-                    // Then sync to Google Sheets in background
+                    // Save to Google Sheets (SERVER IS SOURCE OF TRUTH)
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}`, {
                         method: 'POST',
                         headers: {
@@ -2277,9 +2273,13 @@
                     if (!result.success) {
                         throw new Error('Save failed');
                     }
+                    
+                    // Cache in localStorage ONLY for offline fallback
+                    localStorage.setItem(key, JSON.stringify(value));
+                    
                 } catch (error) {
                     console.error('Error saving to Google Sheets:', error);
-                    // Data is still saved locally, will retry on next action
+                    throw error; // Throw to let caller know save failed
                 } finally {
                     isSyncing = false;
                 }
@@ -2721,55 +2721,34 @@
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '⏳ Loading...';
                 
-                // First: load from localStorage cache for instant display
-                const cachedItems = localStorage.getItem('expiry-items');
-                const cachedBrands = localStorage.getItem('expiry-brands');
+                console.log('=== LOADING DATA FROM SERVER ===');
                 
-                if (cachedItems) {
-                    items = JSON.parse(cachedItems).map(i => ({ ...i, id: String(i.id) }));
-                }
-                if (cachedBrands) {
-                    brands = JSON.parse(cachedBrands).map(b => ({ ...b, id: String(b.id) }));
-                    invalidateBrandCache();
-                }
-                
-                if (items.length > 0 || brands.length > 0) {
-                    updateAllViews(); // Show cached data immediately
-                }
-                
-                // Then: fetch fresh data from server
+                // Load items from server (SERVER IS SOURCE OF TRUTH)
                 const savedItems = await storage.get('expiry-items');
-                if (savedItems) {
-                    const serverItems = savedItems.map(item => ({ ...item, id: String(item.id) }));
-                    // Merge: take union, server items that don't exist locally get added
-                    const localIds = new Set(items.map(i => i.id));
-                    for (const si of serverItems) {
-                        if (localIds.has(si.id)) {
-                            // Update local with server version
-                            const idx = items.findIndex(i => i.id === si.id);
-                            if (idx >= 0) items[idx] = si;
-                        } else {
-                            items.push(si);
-                        }
-                    }
-                    localStorage.setItem('expiry-items', JSON.stringify(items));
+                if (savedItems && Array.isArray(savedItems)) {
+                    items = savedItems.map(item => ({ ...item, id: String(item.id) }));
                     console.log('✓ Items loaded from server:', items.length);
+                } else {
+                    items = [];
+                    console.log('No items on server yet');
                 }
                 
+                // Load brands from server
                 const savedBrands = await storage.get('expiry-brands');
-                if (savedBrands) {
-                    const serverBrands = savedBrands.map(brand => ({ ...brand, id: String(brand.id) }));
-                    const localBrandIds = new Set(brands.map(b => b.id));
-                    for (const sb of serverBrands) {
-                        if (!localBrandIds.has(sb.id)) brands.push(sb);
-                    }
+                if (savedBrands && Array.isArray(savedBrands)) {
+                    brands = savedBrands.map(brand => ({ ...brand, id: String(brand.id) }));
                     invalidateBrandCache();
-                    localStorage.setItem('expiry-brands', JSON.stringify(brands));
                     console.log('✓ Brands loaded from server:', brands.length);
+                } else {
+                    brands = [];
+                    console.log('No brands on server yet');
                 }
                 
+                // Update UI
                 updateAllViews();
                 if (syncStatus) syncStatus.textContent = '';
+                
+                console.log('=== DATA LOAD COMPLETE ===');
                 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -2787,41 +2766,22 @@
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '🔄 Syncing...';
                 
-                console.log('=== AUTO-REFRESH START ===');
-                console.log('Local brands before refresh:', brands.length);
-                console.log('Local items before refresh:', items.length);
+                console.log('=== AUTO-REFRESH FROM SERVER ===');
                 
-                // ===== BRANDS: Safe to refresh (additive-only) =====
-                const existingBrandIds = new Set(brands.map(b => b.id));
-                
-                const savedBrands = await storage.get('expiry-brands');
-                if (savedBrands) {
-                    const normalizedBrands = savedBrands.map(brand => ({
-                        ...brand,
-                        id: String(brand.id)
-                    }));
-                    
-                    // ADDITIVE MERGE: Add new brands from server, NEVER delete local brands
-                    let addedCount = 0;
-                    for (const serverBrand of normalizedBrands) {
-                        if (!existingBrandIds.has(serverBrand.id)) {
-                            brands.push(serverBrand);
-                            addedCount++;
-                            invalidateBrandCache();
-                        }
-                    }
-                    
-                    if (addedCount > 0) {
-                        console.log(`✓ Added ${addedCount} new brands from server`);
-                    }
+                // Fetch items from server (SERVER IS SOURCE OF TRUTH)
+                const savedItems = await storage.get('expiry-items');
+                if (savedItems && Array.isArray(savedItems)) {
+                    items = savedItems.map(item => ({ ...item, id: String(item.id) }));
+                    console.log('✓ Items synced from server:', items.length);
                 }
                 
-                // ===== ITEMS: Don't auto-refresh (could interfere with edits/deletes) =====
-                // Items are only refreshed on manual refresh button click
-                console.log('⏭️ Skipping item refresh (use manual refresh button for items)');
-                
-                console.log('Local brands after refresh:', brands.length);
-                console.log('=== AUTO-REFRESH END ===');
+                // Fetch brands from server
+                const savedBrands = await storage.get('expiry-brands');
+                if (savedBrands && Array.isArray(savedBrands)) {
+                    brands = savedBrands.map(brand => ({ ...brand, id: String(brand.id) }));
+                    invalidateBrandCache();
+                    console.log('✓ Brands synced from server:', brands.length);
+                }
                 
                 updateAllViews();
                 
@@ -2831,6 +2791,9 @@
                         syncStatus.textContent = '';
                     }, 2000);
                 }
+                
+                console.log('=== AUTO-REFRESH COMPLETE ===');
+                
             } catch (error) {
                 console.error('Auto-refresh error:', error);
                 const syncStatus = document.getElementById('sync-status');
@@ -2871,85 +2834,39 @@
         // neither device will accidentally overwrite the other's data.
         async function saveItems() {
             try {
-                // Step 1: Fetch what's currently on the server
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '💾 Saving...';
                 
-                let serverItems = [];
-                try {
-                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getItems&t=${Date.now()}`);
-                    const data = await response.json();
-                    if (Array.isArray(data)) {
-                        serverItems = data.map(i => ({ ...i, id: String(i.id) }));
-                    }
-                } catch (fetchErr) {
-                    console.warn('Could not fetch server state for merge, saving local state only:', fetchErr.message);
-                    // Fall back to direct save if we can't fetch
-                    await storage.set('expiry-items', items);
-                    if (syncStatus) syncStatus.textContent = '✓ Saved';
-                    setTimeout(() => { if (syncStatus) syncStatus.textContent = ''; }, 2000);
-                    return;
-                }
+                console.log('=== SAVING ITEMS TO SERVER ===');
+                console.log('Saving', items.length, 'items');
                 
-                // Step 2: Merge — server items + local items
-                // Rule: If an item exists in local, keep the LOCAL version (it has the latest edit/delete)
-                // Rule: If an item only exists on the server (added by another device), ADD it to local
-                const localIds = new Set(items.map(i => String(i.id)));
-                let newItemsFromServer = 0;
-                
-                for (const serverItem of serverItems) {
-                    if (!localIds.has(String(serverItem.id))) {
-                        // This item was added by another device — add it locally too
-                        items.push(serverItem);
-                        newItemsFromServer++;
-                    }
-                }
-                
-                if (newItemsFromServer > 0) {
-                    console.log(`✓ Merged ${newItemsFromServer} item(s) from another device before saving`);
-                    updateItemViews(); // Refresh UI to show merged items
-                }
-                
-                // Step 3: Save the merged data
+                // Save directly to server
                 await storage.set('expiry-items', items);
-                
-                // Also update localStorage cache
-                localStorage.setItem('expiry-items', JSON.stringify(items));
                 
                 if (syncStatus) syncStatus.textContent = '✓ Saved';
                 setTimeout(() => { if (syncStatus) syncStatus.textContent = ''; }, 2000);
                 
+                console.log('✓ Items saved to server successfully');
+                
             } catch (error) {
                 console.error('saveItems error:', error);
                 const syncStatus = document.getElementById('sync-status');
-                if (syncStatus) { syncStatus.textContent = '⚠️ Save error'; setTimeout(() => { syncStatus.textContent = ''; }, 3000); }
+                if (syncStatus) { 
+                    syncStatus.textContent = '⚠️ Save error'; 
+                    setTimeout(() => { syncStatus.textContent = ''; }, 3000); 
+                }
             }
         }
         
         async function saveBrands() {
             try {
-                // Merge with server brands before saving
-                let serverBrands = [];
-                try {
-                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getBrands&t=${Date.now()}`);
-                    const data = await response.json();
-                    if (Array.isArray(data)) {
-                        serverBrands = data.map(b => ({ ...b, id: String(b.id) }));
-                    }
-                } catch (fetchErr) {
-                    console.warn('Could not fetch server brands for merge:', fetchErr.message);
-                }
-                
-                const localBrandIds = new Set(brands.map(b => String(b.id)));
-                for (const sb of serverBrands) {
-                    if (!localBrandIds.has(String(sb.id))) {
-                        brands.push(sb);
-                        invalidateBrandCache();
-                    }
-                }
+                console.log('=== SAVING BRANDS TO SERVER ===');
+                console.log('Saving', brands.length, 'brands');
                 
                 await storage.set('expiry-brands', brands);
-                localStorage.setItem('expiry-brands', JSON.stringify(brands));
+                
+                console.log('✓ Brands saved to server successfully');
+                
             } catch (error) {
                 console.error('saveBrands error:', error);
             }
