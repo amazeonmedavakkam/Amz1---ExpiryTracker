@@ -2174,19 +2174,10 @@
                         return await getAdminPassword();
                     }
                     
-                    console.log(`📥 FETCHING FROM SERVER: ${key}`);
-                    
-                    // Fetch from server (SERVER IS SOURCE OF TRUTH)
+                    // Show loading indicator
                     const action = key === 'expiry-items' ? 'getItems' : 'getBrands';
-                    const startTime = Date.now();
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}&t=${Date.now()}`);
                     const data = await response.json();
-                    const endTime = Date.now();
-                    
-                    console.log(`📦 RECEIVED FROM SERVER (${endTime - startTime}ms):`, {
-                        count: Array.isArray(data) ? data.length : 'N/A',
-                        firstItem: Array.isArray(data) && data.length > 0 ? data[0] : null
-                    });
                     
                     // Normalize IDs to strings to prevent type mismatch issues
                     let normalizedData = data;
@@ -2197,27 +2188,24 @@
                         }));
                     }
                     
-                    // Cache in localStorage ONLY for offline fallback
+                    // Cache in localStorage
                     localStorage.setItem(key, JSON.stringify(normalizedData));
-                    
-                    console.log(`✅ Loaded ${Array.isArray(normalizedData) ? normalizedData.length : 0} ${key} from server`);
+                    localStorage.setItem(key + '_timestamp', Date.now().toString());
                     
                     return normalizedData;
                 } catch (error) {
-                    console.error('❌ Error fetching from Google Sheets:', error);
-                    console.error('   Error type:', error.name);
-                    console.error('   Error message:', error.message);
+                    console.error('Error fetching from Google Sheets:', error);
                     
-                    // Special fallback for password
+                    // Special fallback for password — use dedicated function
                     if (key === 'admin-password') {
                         return await getAdminPassword();
                     }
                     
-                    // OFFLINE FALLBACK: Use localStorage cache only if server fetch failed
+                    // Fallback to localStorage cache
                     const localData = localStorage.getItem(key);
                     if (localData) {
-                        console.warn('⚠️ Using offline cache for', key);
                         const parsedData = JSON.parse(localData);
+                        // Normalize IDs even from cache
                         if (Array.isArray(parsedData) && parsedData.length > 0) {
                             return parsedData.map(item => ({
                                 ...item,
@@ -2261,7 +2249,7 @@
                 
                 // Prevent multiple simultaneous saves for items/brands
                 if (isSyncing) {
-                    console.log('⏳ Sync in progress, queuing...');
+                    console.log('Sync in progress, queuing...');
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     return this.set(key, value);
                 }
@@ -2271,12 +2259,10 @@
                 try {
                     const action = key === 'expiry-items' ? 'saveItems' : 'saveBrands';
                     
-                    console.log(`📤 SENDING TO SERVER: ${action}`);
-                    console.log(`   Items/Brands count: ${value.length}`);
-                    console.log(`   First item:`, value[0]);
+                    // Save to localStorage immediately for instant feedback
+                    localStorage.setItem(key, JSON.stringify(value));
                     
-                    // Save to Google Sheets (SERVER IS SOURCE OF TRUTH)
-                    const startTime = Date.now();
+                    // Then sync to Google Sheets in background
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}`, {
                         method: 'POST',
                         headers: {
@@ -2286,27 +2272,14 @@
                     });
                     
                     const result = await response.json();
-                    const endTime = Date.now();
-                    
-                    console.log(`📥 RESPONSE FROM SERVER (${endTime - startTime}ms):`, result);
-                    
                     lastSyncTime = Date.now();
                     
                     if (!result.success) {
-                        console.error('❌ SERVER RETURNED ERROR:', result.error);
-                        throw new Error(result.error || 'Save failed');
+                        throw new Error('Save failed');
                     }
-                    
-                    console.log(`✅ Successfully saved ${result.count} ${key} to server`);
-                    
-                    // Cache in localStorage ONLY for offline fallback
-                    localStorage.setItem(key, JSON.stringify(value));
-                    
                 } catch (error) {
-                    console.error('❌ Error saving to Google Sheets:', error);
-                    console.error('   Error type:', error.name);
-                    console.error('   Error message:', error.message);
-                    throw error; // Throw to let caller know save failed
+                    console.error('Error saving to Google Sheets:', error);
+                    // Data is still saved locally, will retry on next action
                 } finally {
                     isSyncing = false;
                 }
@@ -2400,26 +2373,34 @@
                     returnedDate: null
                 };
                 
-                // OPTIMIZED: Add to UI immediately
+                // Add to items array
                 items.push(item);
-                updateItemViews(); // Only update item-related views, not brand views
+                updateItemViews();
                 
-                this.reset();
-                // Pre-fill staff name again after reset
-                document.getElementById('staff-name').value = currentUser.name;
-                // Reset damaged fields
-                document.getElementById('damage-reason-field').style.display = 'none';
-                document.getElementById('damage-category').value = '';
-                document.getElementById('damaged-by-staff-field').style.display = 'none';
-                alert(item.isDamaged 
-                    ? '🔶 Damaged item added and placed directly in Expiry Area!' 
-                    : 'Item added successfully!');
-                
-                // OPTIMIZED: Save ONLY items in background (non-blocking, don't save brands)
-                saveItems().catch(error => {
-                    console.error('Background save failed:', error);
-                    // Item already in UI, so user isn't blocked
-                });
+                // AWAIT the save before showing success
+                try {
+                    await saveItems();
+                    
+                    // Only reset form and show success AFTER successful save
+                    this.reset();
+                    document.getElementById('staff-name').value = currentUser.name;
+                    document.getElementById('damage-reason-field').style.display = 'none';
+                    document.getElementById('damage-category').value = '';
+                    document.getElementById('damaged-by-staff-field').style.display = 'none';
+                    
+                    alert(item.isDamaged 
+                        ? '🔶 Damaged item added and placed directly in Expiry Area!\n\n💾 Saved to server.' 
+                        : '✅ Item added successfully!\n\n💾 Saved to server.');
+                        
+                } catch (saveError) {
+                    console.error('Save failed:', saveError);
+                    alert(`⚠️ Item added to app but FAILED to save to server!\n\nError: ${saveError.message}\n\nPlease check your internet connection and try again.`);
+                    
+                    // Remove item from array if save failed
+                    const idx = items.findIndex(i => i.id === item.id);
+                    if (idx >= 0) items.splice(idx, 1);
+                    updateItemViews();
+                }
             });
 
             // Add brand form handler
@@ -2481,22 +2462,31 @@
                         
                         console.log('Adding brand:', brandName);
                         
-                        // OPTIMIZED: Add to array and update UI immediately
+                        // Add to array and update UI
                         brands.push(brand);
                         invalidateBrandCache();
-                        updateBrandViews(); // Only update brand-related views
+                        updateBrandViews();
                         
-                        // Clear form and show success
-                        this.reset();
-                        alert('Brand added successfully!');
+                        // AWAIT the save
+                        try {
+                            await saveBrands();
+                            
+                            // Only clear form and show success AFTER successful save
+                            this.reset();
+                            alert('✅ Brand added successfully!\n\n💾 Saved to server.');
+                            
+                        } catch (saveError) {
+                            console.error('Brand save failed:', saveError);
+                            alert(`⚠️ Brand added to app but FAILED to save to server!\n\nError: ${saveError.message}\n\nPlease check your internet connection and try again.`);
+                            
+                            // Remove brand if save failed
+                            const idx = brands.findIndex(b => b.id === brand.id);
+                            if (idx >= 0) brands.splice(idx, 1);
+                            invalidateBrandCache();
+                            updateBrandViews();
+                        }
                         
-                        // OPTIMIZED: Save ONLY brands in background (non-blocking, don't save items)
-                        saveBrands().catch(error => {
-                            console.error('Background brand save failed:', error);
-                            // Brand already in UI, so user isn't blocked
-                        });
-                        
-                        // Reset button state after success
+                        // Reset button state
                         isAddingBrand = false;
                         if (submitButton) {
                             submitButton.textContent = originalButtonText;
@@ -2748,34 +2738,55 @@
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '⏳ Loading...';
                 
-                console.log('=== LOADING DATA FROM SERVER ===');
+                // First: load from localStorage cache for instant display
+                const cachedItems = localStorage.getItem('expiry-items');
+                const cachedBrands = localStorage.getItem('expiry-brands');
                 
-                // Load items from server (SERVER IS SOURCE OF TRUTH)
-                const savedItems = await storage.get('expiry-items');
-                if (savedItems && Array.isArray(savedItems)) {
-                    items = savedItems.map(item => ({ ...item, id: String(item.id) }));
-                    console.log('✓ Items loaded from server:', items.length);
-                } else {
-                    items = [];
-                    console.log('No items on server yet');
+                if (cachedItems) {
+                    items = JSON.parse(cachedItems).map(i => ({ ...i, id: String(i.id) }));
                 }
-                
-                // Load brands from server
-                const savedBrands = await storage.get('expiry-brands');
-                if (savedBrands && Array.isArray(savedBrands)) {
-                    brands = savedBrands.map(brand => ({ ...brand, id: String(brand.id) }));
+                if (cachedBrands) {
+                    brands = JSON.parse(cachedBrands).map(b => ({ ...b, id: String(b.id) }));
                     invalidateBrandCache();
-                    console.log('✓ Brands loaded from server:', brands.length);
-                } else {
-                    brands = [];
-                    console.log('No brands on server yet');
                 }
                 
-                // Update UI
+                if (items.length > 0 || brands.length > 0) {
+                    updateAllViews(); // Show cached data immediately
+                }
+                
+                // Then: fetch fresh data from server
+                const savedItems = await storage.get('expiry-items');
+                if (savedItems) {
+                    const serverItems = savedItems.map(item => ({ ...item, id: String(item.id) }));
+                    // Merge: take union, server items that don't exist locally get added
+                    const localIds = new Set(items.map(i => i.id));
+                    for (const si of serverItems) {
+                        if (localIds.has(si.id)) {
+                            // Update local with server version
+                            const idx = items.findIndex(i => i.id === si.id);
+                            if (idx >= 0) items[idx] = si;
+                        } else {
+                            items.push(si);
+                        }
+                    }
+                    localStorage.setItem('expiry-items', JSON.stringify(items));
+                    console.log('✓ Items loaded from server:', items.length);
+                }
+                
+                const savedBrands = await storage.get('expiry-brands');
+                if (savedBrands) {
+                    const serverBrands = savedBrands.map(brand => ({ ...brand, id: String(brand.id) }));
+                    const localBrandIds = new Set(brands.map(b => b.id));
+                    for (const sb of serverBrands) {
+                        if (!localBrandIds.has(sb.id)) brands.push(sb);
+                    }
+                    invalidateBrandCache();
+                    localStorage.setItem('expiry-brands', JSON.stringify(brands));
+                    console.log('✓ Brands loaded from server:', brands.length);
+                }
+                
                 updateAllViews();
                 if (syncStatus) syncStatus.textContent = '';
-                
-                console.log('=== DATA LOAD COMPLETE ===');
                 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -2793,22 +2804,41 @@
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '🔄 Syncing...';
                 
-                console.log('=== AUTO-REFRESH FROM SERVER ===');
+                console.log('=== AUTO-REFRESH START ===');
+                console.log('Local brands before refresh:', brands.length);
+                console.log('Local items before refresh:', items.length);
                 
-                // Fetch items from server (SERVER IS SOURCE OF TRUTH)
-                const savedItems = await storage.get('expiry-items');
-                if (savedItems && Array.isArray(savedItems)) {
-                    items = savedItems.map(item => ({ ...item, id: String(item.id) }));
-                    console.log('✓ Items synced from server:', items.length);
-                }
+                // ===== BRANDS: Safe to refresh (additive-only) =====
+                const existingBrandIds = new Set(brands.map(b => b.id));
                 
-                // Fetch brands from server
                 const savedBrands = await storage.get('expiry-brands');
-                if (savedBrands && Array.isArray(savedBrands)) {
-                    brands = savedBrands.map(brand => ({ ...brand, id: String(brand.id) }));
-                    invalidateBrandCache();
-                    console.log('✓ Brands synced from server:', brands.length);
+                if (savedBrands) {
+                    const normalizedBrands = savedBrands.map(brand => ({
+                        ...brand,
+                        id: String(brand.id)
+                    }));
+                    
+                    // ADDITIVE MERGE: Add new brands from server, NEVER delete local brands
+                    let addedCount = 0;
+                    for (const serverBrand of normalizedBrands) {
+                        if (!existingBrandIds.has(serverBrand.id)) {
+                            brands.push(serverBrand);
+                            addedCount++;
+                            invalidateBrandCache();
+                        }
+                    }
+                    
+                    if (addedCount > 0) {
+                        console.log(`✓ Added ${addedCount} new brands from server`);
+                    }
                 }
+                
+                // ===== ITEMS: Don't auto-refresh (could interfere with edits/deletes) =====
+                // Items are only refreshed on manual refresh button click
+                console.log('⏭️ Skipping item refresh (use manual refresh button for items)');
+                
+                console.log('Local brands after refresh:', brands.length);
+                console.log('=== AUTO-REFRESH END ===');
                 
                 updateAllViews();
                 
@@ -2818,9 +2848,6 @@
                         syncStatus.textContent = '';
                     }, 2000);
                 }
-                
-                console.log('=== AUTO-REFRESH COMPLETE ===');
-                
             } catch (error) {
                 console.error('Auto-refresh error:', error);
                 const syncStatus = document.getElementById('sync-status');
@@ -2861,56 +2888,85 @@
         // neither device will accidentally overwrite the other's data.
         async function saveItems() {
             try {
+                // Step 1: Fetch what's currently on the server
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) syncStatus.textContent = '💾 Saving...';
                 
-                console.log('=== SAVING ITEMS TO SERVER ===');
-                console.log('Total items being saved:', items.length);
-                console.log('Item statuses:', {
-                    upcoming: items.filter(i => i.status === 'upcoming').length,
-                    'expiry-area': items.filter(i => i.status === 'expiry-area').length,
-                    returned: items.filter(i => i.status === 'returned').length,
-                    sold: items.filter(i => i.status === 'sold').length,
-                    discarded: items.filter(i => i.status === 'discarded').length
-                });
-                console.log('First 3 items being saved:', items.slice(0, 3).map(i => ({
-                    id: i.id,
-                    brand: i.brand,
-                    itemName: i.itemName,
-                    status: i.status
-                })));
+                let serverItems = [];
+                try {
+                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getItems&t=${Date.now()}`);
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        serverItems = data.map(i => ({ ...i, id: String(i.id) }));
+                    }
+                } catch (fetchErr) {
+                    console.warn('Could not fetch server state for merge, saving local state only:', fetchErr.message);
+                    // Fall back to direct save if we can't fetch
+                    await storage.set('expiry-items', items);
+                    if (syncStatus) syncStatus.textContent = '✓ Saved';
+                    setTimeout(() => { if (syncStatus) syncStatus.textContent = ''; }, 2000);
+                    return;
+                }
                 
-                // Save directly to server
-                const startTime = Date.now();
+                // Step 2: Merge — server items + local items
+                // Rule: If an item exists in local, keep the LOCAL version (it has the latest edit/delete)
+                // Rule: If an item only exists on the server (added by another device), ADD it to local
+                const localIds = new Set(items.map(i => String(i.id)));
+                let newItemsFromServer = 0;
+                
+                for (const serverItem of serverItems) {
+                    if (!localIds.has(String(serverItem.id))) {
+                        // This item was added by another device — add it locally too
+                        items.push(serverItem);
+                        newItemsFromServer++;
+                    }
+                }
+                
+                if (newItemsFromServer > 0) {
+                    console.log(`✓ Merged ${newItemsFromServer} item(s) from another device before saving`);
+                    updateItemViews(); // Refresh UI to show merged items
+                }
+                
+                // Step 3: Save the merged data
                 await storage.set('expiry-items', items);
-                const endTime = Date.now();
                 
-                console.log(`✓ Items saved to server successfully in ${endTime - startTime}ms`);
+                // Also update localStorage cache
+                localStorage.setItem('expiry-items', JSON.stringify(items));
                 
                 if (syncStatus) syncStatus.textContent = '✓ Saved';
                 setTimeout(() => { if (syncStatus) syncStatus.textContent = ''; }, 2000);
                 
             } catch (error) {
-                console.error('❌ SAVE ERROR:', error);
-                console.error('Error details:', error.message, error.stack);
+                console.error('saveItems error:', error);
                 const syncStatus = document.getElementById('sync-status');
-                if (syncStatus) { 
-                    syncStatus.textContent = '⚠️ Save error'; 
-                    setTimeout(() => { syncStatus.textContent = ''; }, 3000); 
-                }
-                throw error; // Re-throw so caller knows it failed
+                if (syncStatus) { syncStatus.textContent = '⚠️ Save error'; setTimeout(() => { syncStatus.textContent = ''; }, 3000); }
             }
         }
         
         async function saveBrands() {
             try {
-                console.log('=== SAVING BRANDS TO SERVER ===');
-                console.log('Saving', brands.length, 'brands');
+                // Merge with server brands before saving
+                let serverBrands = [];
+                try {
+                    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getBrands&t=${Date.now()}`);
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        serverBrands = data.map(b => ({ ...b, id: String(b.id) }));
+                    }
+                } catch (fetchErr) {
+                    console.warn('Could not fetch server brands for merge:', fetchErr.message);
+                }
+                
+                const localBrandIds = new Set(brands.map(b => String(b.id)));
+                for (const sb of serverBrands) {
+                    if (!localBrandIds.has(String(sb.id))) {
+                        brands.push(sb);
+                        invalidateBrandCache();
+                    }
+                }
                 
                 await storage.set('expiry-brands', brands);
-                
-                console.log('✓ Brands saved to server successfully');
-                
+                localStorage.setItem('expiry-brands', JSON.stringify(brands));
             } catch (error) {
                 console.error('saveBrands error:', error);
             }
@@ -3698,22 +3754,48 @@
                     };
                     items.push(soldItem);
 
+                    // Update UI immediately
                     updateItemViews();
-                    alert(`✅ Done!\n\n📦 ${moveQty} unit(s) → Expiry Area\n✅ ${soldQty} unit(s) → Marked as Sold`);
+                    
+                    // AWAIT the save to ensure it completes
+                    try {
+                        await saveItems();
+                        alert(`✅ Done!\n\n📦 ${moveQty} unit(s) → Expiry Area\n✅ ${soldQty} unit(s) → Marked as Sold\n\n💾 Saved to server successfully!`);
+                    } catch (saveError) {
+                        console.error('Save failed:', saveError);
+                        alert(`⚠️ Item moved in app but FAILED to save to server!\n\nError: ${saveError.message}\n\nPlease check your internet connection and try again.`);
+                        // Revert changes if save failed
+                        item.quantity = totalQty;
+                        item.status = 'upcoming';
+                        item.movedBy = undefined;
+                        item.movedDate = undefined;
+                        const idx = items.findIndex(i => i.id === soldItem.id);
+                        if (idx >= 0) items.splice(idx, 1);
+                        updateItemViews();
+                    }
                 } else {
                     // FULL move — update in place
                     item.status = 'expiry-area';
                     item.movedBy = personName.trim();
                     item.movedDate = now;
 
+                    // Update UI immediately
                     updateItemViews();
-                    alert(`✅ ${moveQty} unit(s) moved to Expiry Area.`);
+                    
+                    // AWAIT the save to ensure it completes
+                    try {
+                        await saveItems();
+                        alert(`✅ ${moveQty} unit(s) moved to Expiry Area.\n\n💾 Saved to server successfully!`);
+                    } catch (saveError) {
+                        console.error('Save failed:', saveError);
+                        alert(`⚠️ Item moved in app but FAILED to save to server!\n\nError: ${saveError.message}\n\nPlease check your internet connection and try again.`);
+                        // Revert changes if save failed
+                        item.status = 'upcoming';
+                        item.movedBy = undefined;
+                        item.movedDate = undefined;
+                        updateItemViews();
+                    }
                 }
-                
-                saveItems().catch(error => {
-                    console.error('Background save failed:', error);
-                    alert('Warning: Item moved in app but may not be saved to server. Please check connection.');
-                });
                 
             } catch (error) {
                 console.error('ERROR in moveToExpiryArea:', error);
@@ -3745,19 +3827,31 @@
                     return;
                 }
                 
-                // OPTIMIZED: Update UI immediately
+                // Store old values for rollback
+                const oldStatus = item.status;
+                const oldReturnedBy = item.returnedBy;
+                const oldReturnedDate = item.returnedDate;
+                
+                // Update item
                 item.status = 'returned';
                 item.returnedBy = personName.trim();
                 item.returnedDate = new Date().toISOString();
                 
-                updateItemViews(); // OPTIMIZED: Only update item views
-                alert('Item marked as returned successfully!');
+                updateItemViews();
                 
-                // OPTIMIZED: Save ONLY items in background (non-blocking)
-                saveItems().catch(error => {
-                    console.error('Background save failed:', error);
-                    alert('Warning: Item marked in app but may not be saved to server. Please check connection.');
-                });
+                // AWAIT the save
+                try {
+                    await saveItems();
+                    alert('✅ Item marked as returned successfully!\n\n💾 Saved to server.');
+                } catch (saveError) {
+                    console.error('Save failed:', saveError);
+                    alert(`⚠️ Item marked in app but FAILED to save to server!\n\nError: ${saveError.message}\n\nPlease check your internet connection and try again.`);
+                    // Rollback on error
+                    item.status = oldStatus;
+                    item.returnedBy = oldReturnedBy;
+                    item.returnedDate = oldReturnedDate;
+                    updateItemViews();
+                }
                 
             } catch (error) {
                 console.error('Error marking returned:', error);
@@ -3864,18 +3958,33 @@
                     return;
                 }
 
+                // Store old values for rollback
+                const oldStatus = item.status;
+                const oldSoldBy = item.soldBy;
+                const oldSoldDate = item.soldDate;
+                const oldDaysRemaining = item.daysRemainingAtSale;
+
                 item.status = 'sold';
                 item.soldBy = personName.trim();
                 item.soldDate = new Date().toISOString();
                 item.daysRemainingAtSale = days;
 
                 updateItemViews();
-                alert(`✅ Item marked as sold!\n\n${item.brand} - ${item.itemName || ''}`);
 
-                saveItems().catch(error => {
-                    console.error('Background save failed:', error);
-                    alert('Warning: Item marked in app but may not be saved to server. Please check connection.');
-                });
+                // AWAIT the save
+                try {
+                    await saveItems();
+                    alert(`✅ Item marked as sold!\n\n${item.brand} - ${item.itemName || ''}\n\n💾 Saved to server.`);
+                } catch (saveError) {
+                    console.error('Save failed:', saveError);
+                    alert(`⚠️ Item marked in app but FAILED to save to server!\n\nError: ${saveError.message}\n\nPlease check your internet connection and try again.`);
+                    // Rollback on error
+                    item.status = oldStatus;
+                    item.soldBy = oldSoldBy;
+                    item.soldDate = oldSoldDate;
+                    item.daysRemainingAtSale = oldDaysRemaining;
+                    updateItemViews();
+                }
 
             } catch (error) {
                 console.error('Error marking as sold:', error);
