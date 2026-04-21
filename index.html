@@ -2054,7 +2054,7 @@
     <script>
         // ===== CONFIGURATION =====
         // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoIX7pIS5_HqdB6ExpxQj4toGpu0_dKcAwyzdAKcgmBH8YNbfGsmDdJR_FpmAwiDwU/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzkXCAqK1Tyi8nwNlfkBNRCn099fyxE0JYpmjuhOlD8h5Ku2VgM0JD9BxI9jCS0Ti3-kg/exec';
         
         // ===== PASSWORD MANAGEMENT =====
         // 3-layer fallback: Google Sheets → localStorage → default 'admin123'
@@ -2174,10 +2174,19 @@
                         return await getAdminPassword();
                     }
                     
+                    console.log(`📥 FETCHING FROM SERVER: ${key}`);
+                    
                     // Fetch from server (SERVER IS SOURCE OF TRUTH)
                     const action = key === 'expiry-items' ? 'getItems' : 'getBrands';
+                    const startTime = Date.now();
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}&t=${Date.now()}`);
                     const data = await response.json();
+                    const endTime = Date.now();
+                    
+                    console.log(`📦 RECEIVED FROM SERVER (${endTime - startTime}ms):`, {
+                        count: Array.isArray(data) ? data.length : 'N/A',
+                        firstItem: Array.isArray(data) && data.length > 0 ? data[0] : null
+                    });
                     
                     // Normalize IDs to strings to prevent type mismatch issues
                     let normalizedData = data;
@@ -2191,9 +2200,13 @@
                     // Cache in localStorage ONLY for offline fallback
                     localStorage.setItem(key, JSON.stringify(normalizedData));
                     
+                    console.log(`✅ Loaded ${Array.isArray(normalizedData) ? normalizedData.length : 0} ${key} from server`);
+                    
                     return normalizedData;
                 } catch (error) {
-                    console.error('Error fetching from Google Sheets:', error);
+                    console.error('❌ Error fetching from Google Sheets:', error);
+                    console.error('   Error type:', error.name);
+                    console.error('   Error message:', error.message);
                     
                     // Special fallback for password
                     if (key === 'admin-password') {
@@ -2203,7 +2216,7 @@
                     // OFFLINE FALLBACK: Use localStorage cache only if server fetch failed
                     const localData = localStorage.getItem(key);
                     if (localData) {
-                        console.warn('Using offline cache for', key);
+                        console.warn('⚠️ Using offline cache for', key);
                         const parsedData = JSON.parse(localData);
                         if (Array.isArray(parsedData) && parsedData.length > 0) {
                             return parsedData.map(item => ({
@@ -2248,7 +2261,7 @@
                 
                 // Prevent multiple simultaneous saves for items/brands
                 if (isSyncing) {
-                    console.log('Sync in progress, queuing...');
+                    console.log('⏳ Sync in progress, queuing...');
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     return this.set(key, value);
                 }
@@ -2258,7 +2271,12 @@
                 try {
                     const action = key === 'expiry-items' ? 'saveItems' : 'saveBrands';
                     
+                    console.log(`📤 SENDING TO SERVER: ${action}`);
+                    console.log(`   Items/Brands count: ${value.length}`);
+                    console.log(`   First item:`, value[0]);
+                    
                     // Save to Google Sheets (SERVER IS SOURCE OF TRUTH)
+                    const startTime = Date.now();
                     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=${action}`, {
                         method: 'POST',
                         headers: {
@@ -2268,17 +2286,26 @@
                     });
                     
                     const result = await response.json();
+                    const endTime = Date.now();
+                    
+                    console.log(`📥 RESPONSE FROM SERVER (${endTime - startTime}ms):`, result);
+                    
                     lastSyncTime = Date.now();
                     
                     if (!result.success) {
-                        throw new Error('Save failed');
+                        console.error('❌ SERVER RETURNED ERROR:', result.error);
+                        throw new Error(result.error || 'Save failed');
                     }
+                    
+                    console.log(`✅ Successfully saved ${result.count} ${key} to server`);
                     
                     // Cache in localStorage ONLY for offline fallback
                     localStorage.setItem(key, JSON.stringify(value));
                     
                 } catch (error) {
-                    console.error('Error saving to Google Sheets:', error);
+                    console.error('❌ Error saving to Google Sheets:', error);
+                    console.error('   Error type:', error.name);
+                    console.error('   Error message:', error.message);
                     throw error; // Throw to let caller know save failed
                 } finally {
                     isSyncing = false;
@@ -2838,23 +2865,40 @@
                 if (syncStatus) syncStatus.textContent = '💾 Saving...';
                 
                 console.log('=== SAVING ITEMS TO SERVER ===');
-                console.log('Saving', items.length, 'items');
+                console.log('Total items being saved:', items.length);
+                console.log('Item statuses:', {
+                    upcoming: items.filter(i => i.status === 'upcoming').length,
+                    'expiry-area': items.filter(i => i.status === 'expiry-area').length,
+                    returned: items.filter(i => i.status === 'returned').length,
+                    sold: items.filter(i => i.status === 'sold').length,
+                    discarded: items.filter(i => i.status === 'discarded').length
+                });
+                console.log('First 3 items being saved:', items.slice(0, 3).map(i => ({
+                    id: i.id,
+                    brand: i.brand,
+                    itemName: i.itemName,
+                    status: i.status
+                })));
                 
                 // Save directly to server
+                const startTime = Date.now();
                 await storage.set('expiry-items', items);
+                const endTime = Date.now();
+                
+                console.log(`✓ Items saved to server successfully in ${endTime - startTime}ms`);
                 
                 if (syncStatus) syncStatus.textContent = '✓ Saved';
                 setTimeout(() => { if (syncStatus) syncStatus.textContent = ''; }, 2000);
                 
-                console.log('✓ Items saved to server successfully');
-                
             } catch (error) {
-                console.error('saveItems error:', error);
+                console.error('❌ SAVE ERROR:', error);
+                console.error('Error details:', error.message, error.stack);
                 const syncStatus = document.getElementById('sync-status');
                 if (syncStatus) { 
                     syncStatus.textContent = '⚠️ Save error'; 
                     setTimeout(() => { syncStatus.textContent = ''; }, 3000); 
                 }
+                throw error; // Re-throw so caller knows it failed
             }
         }
         
